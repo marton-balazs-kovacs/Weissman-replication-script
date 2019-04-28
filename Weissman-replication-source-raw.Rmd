@@ -1,0 +1,47 @@
+---
+title: "Weissman-replication-source-raw"
+author: "Marton Kovacs"
+date: '2019 april 28 '
+output: html_document
+---
+
+# Load packages
+```{r}
+library(tidyverse)
+library(glue)
+library(janitor)
+```
+
+# Import and merge data
+```{r}
+## Function to save subdirectories and filename as a variable
+read_plus <- function(pattern = ".csv$", path = "Source/", subfolder_name = subfolder_name, exclude = "demographics.csv$") {
+  list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T) %>% 
+    .[ !grepl(exclude, .) ] %>% 
+    map(.,
+        ~ read_csv(.x) %>% 
+          mutate(data_type = str_extract(.x, "[^/]+"),
+                 filename = str_remove_all(.x, ".*/|.csv"),
+                 task = str_extract(.x, "(?<=/).*?(?=/)")))
+}
+
+#
+## Saving subfolder names
+subfolder <- list("Primeprobe", "Flanker", "Stroop", "Simon")
+
+## Read in response datafiles
+source_task_response <-
+  tibble(task = subfolder,
+         content = map(subfolder,
+                       ~ read_plus(subfolder_name = .x)))
+
+source_task_response$content %>% View()
+
+## Read in demographic data
+
+```
+
+# Create participant id
+```{r}
+
+```
