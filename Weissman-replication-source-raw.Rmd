@@ -1,7 +1,7 @@
 ---
 title: "Weissman-replication-source-raw"
 author: "Marton Kovacs"
-date: '2019 april 28 '
+date: '`r format(Sys.time(), "%d %B, %Y")`'
 output: html_document
 ---
 
