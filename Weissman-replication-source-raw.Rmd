@@ -10,6 +10,20 @@ output: html_document
 library(tidyverse)
 library(glue)
 library(janitor)
+library(osfr)
+```
+
+# Download data from OSF
+## OSF auth (until project is public)
+```{r}
+osf_auth(token = read_lines("osf_token_write_martonbalazskovacs.txt"))
+```
+
+## Connect to data OSF folder
+```{r}
+data_guid <- "9knds"
+
+weissman_project <- osf_retrieve_node(data_guid)
 ```
 
 # Import and merge data
@@ -25,23 +39,20 @@ read_plus <- function(pattern = ".csv$", path = "Source/", subfolder_name = subf
                  task = str_extract(.x, "(?<=/).*?(?=/)")))
 }
 
-#
-## Saving subfolder names
+# Saving subfolder names
 subfolder <- list("Primeprobe", "Flanker", "Stroop", "Simon")
 
-## Read in response datafiles
+# Read in response datafiles
 source_task_response <-
   tibble(task = subfolder,
          content = map(subfolder,
                        ~ read_plus(subfolder_name = .x)))
-
 source_task_response$content %>% View()
 
-## Read in demographic data
-
-```
-
-# Create participant id
-```{r}
-
+# Test osfr
+weissman_project %>% 
+  osf_ls_files(path = "Source", type = "folder") %>%
+  filter(name == "simon") %>% 
+  osf_ls_files(pattern = "demographics.csv") %>% 
+  osf_download(overwrite = T) 
 ```
