@@ -11,7 +11,6 @@ library(tidyverse)
 library(glue)
 library(janitor)
 library(osfr)
-
 ```
 
 # Load helper functions
@@ -36,7 +35,6 @@ weissman_project <- osf_retrieve_node(data_guid)
 ## Download data locally
 
 ```{r osf download data}
-
 local_data_pth <- file.path("data","Source")
 
 create_local_structure(local_data_pth)
@@ -53,36 +51,40 @@ data_files %>%
 
 # uncomment following line to remove the data   
 # remove_local_data(local_data_pth)
-
 ```
 
 # Import and merge data
+
 ```{r}
 ## Function to save subdirectories and filename as a variable
-read_plus <- function(pattern = ".csv$", path = "Source/", subfolder_name = subfolder_name, exclude = "demographics.csv$") {
+read_plus <- function(pattern = ".csv$", path = "data/Source/", subfolder_name = subfolder_name, exclude = exclude) {
   list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T) %>% 
     .[ !grepl(exclude, .) ] %>% 
-    map(.,
+    map_dfr(.,
         ~ read_csv(.x) %>% 
-          mutate(data_type = str_extract(.x, "[^/]+"),
+          mutate(data_type = str_extract(.x, "(?<=/).*?(?=/)"),
                  filename = str_remove_all(.x, ".*/|.csv"),
-                 task = str_extract(.x, "(?<=/).*?(?=/)")))
+                 task = str_extract(.x, subfolder_name)))
 }
 
 # Saving subfolder names
-subfolder <- list("Primeprobe", "Flanker", "Stroop", "Simon")
+subfolder <- list("primeprobe", "flanker", "stroop", "simon")
 
 # Read in response datafiles
-source_task_response <-
+source <-
   tibble(task = subfolder,
-         content = map(subfolder,
-                       ~ read_plus(subfolder_name = .x)))
-source_task_response$content %>% View()
+         response = map2(subfolder, "demographics.csv$",
+                       ~ read_plus(subfolder_name = .x,
+                                   exclude = .y)),
+         demographics = map2(subfolder, "2019",
+                       ~ read_plus(subfolder_name = .x,
+                                  exclude = .y)))
 
-# Test osfr
-weissman_project %>% 
-  osf_ls_files(path = "Source", type = "folder") %>%
-  filter(name == "simon") %>% 
-  osf_ls_files(pattern = "demographics.csv") %>% 
-  osf_download(overwrite = T) 
+source$response[[1]] %>% View()
+```
+
+# Join demographic data with responses
+
+```{r}
+
 ```
