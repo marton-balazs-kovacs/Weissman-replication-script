@@ -78,3 +78,34 @@ create_local_structure <- function(pth) {
 remove_local_data <- function(local_data_pth) {
   unlink(local_data_pth, recursive = T)
 }
+
+#' Reads in and merge local csv files
+#' The function reads in and merge individual locale csv files
+#' into one tibble from different subdirectories. The function also
+#' saves directory, subdirectory and file names as a variable.
+#' 
+#' @param pattern The pattern to look for when listing files in the locale directory.
+#' @param path The path to the locale directory that contains the subdirectories.
+#' @param subfolder_name A character vector of the subfolder names to look into.
+#' @param exclude A character string. Filenames containing this string will not be read in.
+#' 
+#' @return All files that meets the criteria merged into a tibble from the specified subdirectory.
+read_plus <- function(pattern = ".csv$", path = "data/Source/", subfolder_name, exclude) {
+  list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T) %>% 
+  .[ !grepl(exclude, .) ] %>% 
+  map_dfr(.,
+          ~ read_csv(.x) %>% 
+            mutate(data_type = str_extract(.x, "(?<=/).*?(?=/)"),
+                   filename = str_remove_all(.x, ".*/|.csv"),
+                   task = str_extract(.x, subfolder_name)))
+}
+
+#' Function to join nested dataframes with an unnested dataframe
+#' Retrieved from https://stackoverflow.com/questions/50125026/joining-dataframe-to-nested-dataframes-within-purrrmap?noredirect=1&lq=1
+#' 
+#' A wrapper function around left_join
+#' 
+#' 
+join_df <- function(df_nest, df_unnest, var_by = c("id", "task", "consentTime")) {
+  left_join(df_nest, df_unnest, by = var_by)
+}
