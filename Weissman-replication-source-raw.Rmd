@@ -86,7 +86,7 @@ participant_id <- read_csv("data/Source/participant-metadata.csv")
 
 # Join demographics data with responses
 
-```{r}
+```{r join demographic data}
 source <- 
   source %>%
   mutate(demographics = map(demographics, ~ select(., -filename))) %>% 
@@ -95,12 +95,19 @@ source <-
 
 # Join data with participant_id
 
-```{r}
+```{r join participant id}
 join_df <- function(df_nest, df_other) {
   left_join(df_nest, df_other, by = c("id", "task", "consentTime"))
-  return(df_all)
 }
 
 source <- source %>%
   mutate(join_id = map(join, ~ join_df(., participant_id)))
+```
+
+# TODO: Add code to deidentify participants but make it possible to bind together different responses from the same participant.
+
+# Save each task separately
+```{r save tasks}
+source %>%
+  
 ```
