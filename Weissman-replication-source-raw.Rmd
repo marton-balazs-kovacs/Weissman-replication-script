@@ -110,11 +110,11 @@ source <- source %>%
 # Save each task separately
 ## TODO: Write function for this task
 ```{r save tasks}
-write_tsv(source$join_id[[1]], path = paste0("data/Raw/", source$task[[1]], "_data.tsv"))
+write_tsv(unnest(source$join_id[[1]]), path = paste0("data/Raw/", source$task[[1]], "_data.tsv"))
 
-write_tsv(source$join_id[[2]], path = paste0("data/Raw/", source$task[[2]], "_data.tsv"))
+write_tsv(unnest(source$join_id[[2]]), path = paste0("data/Raw/", source$task[[2]], "_data.tsv"))
 
-write_tsv(source$join_id[[3]], path = paste0("data/Raw/", source$task[[3]], "_data.tsv"))
+write_tsv(unnest(source$join_id[[3]]), path = paste0("data/Raw/", source$task[[3]], "_data.tsv"))
 
-write_tsv(source$join_id[[4]], path = paste0("data/Raw/", source$task[[4]], "_data.tsv"))
+write_tsv(unnest(source$join_id[[4]]), path = paste0("data/Raw/", source$task[[4]], "_data.tsv"))
 ```
