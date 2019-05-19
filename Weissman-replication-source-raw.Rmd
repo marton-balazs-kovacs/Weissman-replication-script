@@ -8,8 +8,8 @@ output: html_document
 # Load packages
 ```{r load packages}
 library(tidyverse)
-library(glue)
 library(janitor)
+library(purrrlyr)
 library(osfr)
 ```
 
@@ -107,7 +107,13 @@ source <- source %>%
 # TODO: Add code to deidentify participants but make it possible to bind together different responses from the same participant.
 
 # Save each task separately
+## TODO: Write function for this task
 ```{r save tasks}
-source %>%
-  
+write_tsv(source$join_id[[1]], path = paste0("data/Raw/", source$task[[1]], "_data.tsv"))
+
+write_tsv(source$join_id[[2]], path = paste0("data/Raw/", source$task[[2]], "_data.tsv"))
+
+write_tsv(source$join_id[[3]], path = paste0("data/Raw/", source$task[[3]], "_data.tsv"))
+
+write_tsv(source$join_id[[4]], path = paste0("data/Raw/", source$task[[4]], "_data.tsv"))
 ```
