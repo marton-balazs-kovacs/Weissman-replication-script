@@ -63,12 +63,16 @@ subfolder <- list("primeprobe", "flanker", "stroop", "simon")
 # Read in datafiles
 source <-
   tibble(task = subfolder,
-         response = map2(subfolder, "demographics.csv$",
+         response = map(subfolder,
                        ~ read_plus(subfolder_name = .x,
-                                   exclude = .y)),
-         demographics = map2(subfolder, "2019",
+                                   pattern = ".csv$",
+                                   path = "data/Source/",
+                                   exclude = "demographics.csv$")),
+         demographics = map(subfolder,
                        ~ read_plus(subfolder_name = .x,
-                                  exclude = .y)))
+                                   pattern = ".csv$",
+                                   path = "data/Source/",
+                                   exclude = "2019")))
 
 # Read in participant identifiers data
 participant_id <- read_csv("data/Source/participant-metadata.csv")
@@ -83,14 +87,20 @@ source <-
   mutate(join = map2(response, demographics, ~ left_join(.x, .y, by = c("id", "task", "data_type"))))
 ```
 
+# Deidentify participants
+
+```{r deidentify participants}
+participant_id <- participant_id %>% 
+  group_by(userId) %>% 
+  mutate(participant_id = group_indices())
+```
+
 # Join data with participant_id
 
 ```{r join participant id}
 source <- source %>%
   mutate(join_id = map(join, ~ join_df(., participant_id)))
 ```
-
-# TODO: Add code to deidentify participants but make it possible to bind together different responses from the same participant.
 
 # Save each task separately
 ## TODO: Write function for this task
