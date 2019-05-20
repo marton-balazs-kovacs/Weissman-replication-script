@@ -67,12 +67,14 @@ source <-
                        ~ read_plus(subfolder_name = .x,
                                    pattern = ".csv$",
                                    path = "data/Source/",
-                                   exclude = "demographics.csv$")),
+                                   exclude = "demographics.csv$",
+                                   sep = ",")),
          demographics = map(subfolder,
                        ~ read_plus(subfolder_name = .x,
                                    pattern = ".csv$",
                                    path = "data/Source/",
-                                   exclude = "2019")))
+                                   exclude = "2019",
+                                   sep = ",")))
 
 # Read in participant identifiers data
 participant_id <- read_csv("data/Source/participant-metadata.csv")
@@ -90,7 +92,8 @@ source <-
 # Deidentify participants
 
 ```{r deidentify participants}
-participant_id <- participant_id %>% 
+participant_id <- 
+  participant_id %>% 
   group_by(userId) %>% 
   mutate(participant_id = group_indices())
 ```
@@ -98,7 +101,8 @@ participant_id <- participant_id %>%
 # Join data with participant_id
 
 ```{r join participant id}
-source <- source %>%
+source <- 
+  source %>%
   mutate(join_id = map(join, ~ join_df(., participant_id)))
 ```
 
