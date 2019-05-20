@@ -59,9 +59,17 @@ data_files %>%
 # Import data
 
 ```{r}
-raw_primeprobe <- read_tsv("data/Raw/primeprobe_data.tsv")
+raw <-
+  tibble(task = subfolder,
+         response = map(subfolder,
+                       ~ read_plus(subfolder_name = .x,
+                                   pattern = ".tsv$",
+                                   path = "data/Raw/",
+                                   sep = "\t")))
 ```
 
-```{r}
+# 
 
+```{r}
+lubridate::as_datetime(1554889449143 / 1000, tz = "Europe/Prague")
 ```
