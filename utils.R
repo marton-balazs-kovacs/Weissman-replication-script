@@ -88,13 +88,20 @@ remove_local_data <- function(local_data_pth) {
 #' @param path The path to the locale directory that contains the subdirectories.
 #' @param subfolder_name A character vector of the subfolder names to look into.
 #' @param exclude A character string. Filenames containing this string will not be read in.
+#' @param sep Used as delim in read_delim.
 #' 
 #' @return All files that meets the criteria merged into a tibble from the specified subdirectory.
-read_plus <- function(pattern, path, subfolder_name, exclude) {
-  list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T) %>% 
-  .[ !grepl(exclude, .) ] %>% 
+read_plus <- function(pattern, path, subfolder_name, exclude = NULL, sep) {
+  files <- tibble(list = list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T))
+  
+  if(!is.null(exclude)){
+  files <- filter(files, !str_detect(list, exclude))
+  }
+  
+  files %>%
+  pull(list) %>% 
   map_dfr(.,
-          ~ read_csv(.x) %>% 
+          ~ read_delim(.x, delim = sep) %>% 
             mutate(data_type = str_extract(.x, "(?<=/).*?(?=/)"),
                    filename = str_remove_all(.x, ".*/|.csv"),
                    task = str_extract(.x, subfolder_name)))
