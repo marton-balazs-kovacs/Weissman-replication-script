@@ -90,7 +90,7 @@ remove_local_data <- function(local_data_pth) {
 #' @param exclude A character string. Filenames containing this string will not be read in.
 #' 
 #' @return All files that meets the criteria merged into a tibble from the specified subdirectory.
-read_plus <- function(pattern = ".csv$", path = "data/Source/", subfolder_name, exclude) {
+read_plus <- function(pattern, path, subfolder_name, exclude) {
   list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T) %>% 
   .[ !grepl(exclude, .) ] %>% 
   map_dfr(.,
@@ -105,7 +105,11 @@ read_plus <- function(pattern = ".csv$", path = "data/Source/", subfolder_name, 
 #' 
 #' A wrapper function around left_join
 #' 
+#' @param df_nest The name of the vector that contains the nested dataframes.
+#' @param df_unnest The name of the unnested dataframe that will be joined to the nested ones.
+#' @param var_by The id variables to join by.
 #' 
+#' @return A vector of nested dataframes.
 join_df <- function(df_nest, df_unnest, var_by = c("id", "task", "consentTime")) {
   left_join(df_nest, df_unnest, by = var_by)
 }
