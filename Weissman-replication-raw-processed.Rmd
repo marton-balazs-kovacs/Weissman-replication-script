@@ -59,6 +59,10 @@ data_files %>%
 # Import data
 
 ```{r}
+# Saving subfolder names
+subfolder <- list("primeprobe", "flanker", "stroop", "simon")
+
+# Reading in data
 raw <-
   tibble(task = subfolder,
          response = map(subfolder,
@@ -71,5 +75,9 @@ raw <-
 # 
 
 ```{r}
-lubridate::as_datetime(1554889449143 / 1000, tz = "Europe/Prague")
+raw <- 
+  raw %>% 
+  mutate(test = map(response,
+                    ~ mutate(.,
+                             responseTime = lubridate::as_datetime(responseTime / 1000, tz = "Europe/Prague"))))
 ```
