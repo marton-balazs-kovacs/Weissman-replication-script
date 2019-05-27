@@ -120,3 +120,8 @@ read_plus <- function(pattern, path, subfolder_name, exclude = NULL, sep) {
 join_df <- function(df_nest, df_unnest, var_by = c("id", "task", "consentTime")) {
   left_join(df_nest, df_unnest, by = var_by)
 }
+
+#' Function to not include a vector in another vector
+#' Retrieved from https://stackoverflow.com/questions/5831794/opposite-of-in
+#' 
+`%ni%` <- Negate(`%in%`)
