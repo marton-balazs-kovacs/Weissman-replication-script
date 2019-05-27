@@ -10,7 +10,6 @@ output: html_document
 ```{r load packages}
 library(tidyverse)
 library(janitor)
-library(purrrlyr)
 library(osfr)
 ```
 
@@ -89,13 +88,25 @@ source <-
   mutate(join = map2(response, demographics, ~ left_join(.x, .y, by = c("id", "task", "data_type"))))
 ```
 
-# Deidentify participants
+# Creating anonym id to link participants to responses
 
-```{r deidentify participants}
+```{r}
 participant_id <- 
   participant_id %>% 
+  mutate(userId = if_else(userId == "abcdef12345",
+                          paste0("abcdef12345", row_number()),
+                          userId)) %>% 
   group_by(userId) %>% 
   mutate(participant_id = group_indices())
+```
+
+# Checking the number of participants for each task
+
+```{r}
+participant_id %>% 
+  group_by(task) %>% 
+  distinct(userId) %>% 
+  count()
 ```
 
 # Join data with participant_id
@@ -106,14 +117,64 @@ source <-
   mutate(join_id = map(join, ~ join_df(., participant_id)))
 ```
 
+# Delete trial responses
+
+```{r}
+# UserIds to be deleted
+trial_response_id <- c("1", "DELETE", "x")
+
+# Deleting userId
+source <-
+  source %>% 
+  mutate(filtered = map(join_id, ~ filter(., userId %ni% trial_response_id)))
+```
+
+# Delete cases where the userId is missing
+
+```{r}
+source <- 
+  source %>% 
+  mutate(filtered = map(filtered, ~ filter(., !is.na(userId))))
+```
+
+# Deidentify participatns
+
+```{r}
+source <- 
+  source %>% 
+  mutate(filtered = map(filtered, ~ select(., -userId, -debriefGeneralComments)))
+```
+
+# Create a variable to divide response from the first wave of data collection from the second wave in the Hungarian sample
+```{r}
+source <- 
+  source %>% 
+  mutate(filtered = map(filtered,
+                    ~ mutate(.,
+                             wave = case_when(loc == "HUN" & ymd("2019-05-07", tz = "Europe/Prague") > as_datetime(consentTime / 1000, tz = "Europe/Prague") ~ 1L,
+                                              loc == "HUN" & ymd("2019-05-07", tz = "Europe/Prague") <= as_datetime(consentTime / 1000, tz = "Europe/Prague") ~ 2L,
+                                              loc == "CZ" ~ 1L)
+                             )
+                    )
+         )
+
+```
+
+# Keep only data from wave 1
+```{r}
+source <- 
+  source %>% 
+  mutate(filtered = map(filtered, ~ filter(., wave == 1L)))
+```
+
 # Save each task separately
 ## TODO: Write function for this task
 ```{r save tasks}
-write_tsv(unnest(source$join_id[[1]]), path = paste0("data/Raw/", source$task[[1]], "_data.tsv"))
+write_tsv(unnest(source$filtered[[1]]), path = paste0("data/Raw/", source$task[[1]], "/", source$task[[1]], "_data.tsv"))
 
-write_tsv(unnest(source$join_id[[2]]), path = paste0("data/Raw/", source$task[[2]], "_data.tsv"))
+write_tsv(unnest(source$filtered[[2]]), path = paste0("data/Raw/", source$task[[2]], "/", source$task[[2]], "_data.tsv"))
 
-write_tsv(unnest(source$join_id[[3]]), path = paste0("data/Raw/", source$task[[3]], "_data.tsv"))
+write_tsv(unnest(source$filtered[[3]]), path = paste0("data/Raw/", source$task[[3]], "/", source$task[[3]], "_data.tsv"))
 
-write_tsv(unnest(source$join_id[[4]]), path = paste0("data/Raw/", source$task[[4]], "_data.tsv"))
+write_tsv(unnest(source$filtered[[4]]), path = paste0("data/Raw/", source$task[[4]], "/", source$task[[4]], "_data.tsv"))
 ```
