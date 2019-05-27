@@ -13,7 +13,6 @@ library(janitor)
 library(purrrlyr)
 library(osfr)
 library(lubridate)
-library(anytime)
 ```
 
 # Load helper functions
@@ -72,12 +71,37 @@ raw <-
                                    sep = "\t")))
 ```
 
-# 
+# Calculate accuracy in each task for each participant
 
 ```{r}
-raw <- 
-  raw %>% 
+raw <-
+  raw %>%
   mutate(test = map(response,
-                    ~ mutate(.,
-                             responseTime = lubridate::as_datetime(responseTime / 1000, tz = "Europe/Prague"))))
+                    ~ mutate(., correct = case_when(responseTarget == responseContent ~ 1L,
+                                                    responseTarget != responseContent ~ 0L))),
+         test = map(test,
+                     . %>% 
+                      filter(isPractice == 0L) %>% 
+                      group_by(participant_id, id) %>% 
+                      mutate(prop = sum(correct) / n() * 100,
+                             drop = case_when(prop < 70 ~ 1L,
+                                              TRUE ~ 0L))))
+# TODO: filter excludes practice trials from the dataframe. rewrite the function to keep them
+```
+
+# Save task to individual dataframes
+
+```{r}
+primeprobe_raw <- raw %>% filter(task == "primeprobe") %>% select(response) %>% unnest()
+
+flanker_raw <- raw %>% filter(task == "flanker") %>% select(response) %>% unnest()
+
+stroop_raw <- raw %>% filter(task == "stroop") %>% select(response) %>% unnest()
+
+simon_raw <- raw %>% filter(task == "simon") %>% select(response) %>% unnest()
+```
+
+# Calucalte the response time variable
+```{r}
+
 ```
