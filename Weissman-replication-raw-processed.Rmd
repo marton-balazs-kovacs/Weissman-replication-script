@@ -71,22 +71,73 @@ raw <-
                                    sep = "\t")))
 ```
 
+# Check whether each participant completed the study
+
+## Number of trials for each task
+
+* Primeprobe
+** practice = 24
+** test = 388
+** total = 412
+* Flanker, Simon, Stroop
+** practice = 24
+** test = 324
+** total = 348
+
+```{r}
+map(raw$response,
+    . %>% 
+      group_by(participant_id, id, task, isPractice) %>% 
+      count() %>%
+      mutate(complete = case_when(isPractice == 1L & n == 24 ~ "complete",
+                                  task == "primeprobe" & isPractice == 0L & n == 388 ~ "complete",
+                                  task %in% c("flanker", "simon", "stroop") & isPractice == 0L & n == 324 ~ "complete",
+                                  TRUE ~ "incomplete")) %>% 
+      group_by(isPractice, complete) %>% 
+      count())
+```
+
 # Calculate accuracy in each task for each participant
 
 ```{r}
 raw <-
   raw %>%
-  mutate(test = map(response,
+  mutate(response = map(response,
                     ~ mutate(., correct = case_when(responseTarget == responseContent ~ 1L,
                                                     responseTarget != responseContent ~ 0L))),
-         test = map(test,
+         response = map(response,
                      . %>% 
-                      filter(isPractice == 0L) %>% 
-                      group_by(participant_id, id) %>% 
+                      group_by(participant_id, id, isPractice) %>% 
                       mutate(prop = sum(correct) / n() * 100,
-                             drop = case_when(prop < 70 ~ 1L,
+                             drop = case_when(isPractice == 0L & prop < 70 ~ 1L,
+                                              isPractice == 1L ~ 1L, # drop practice trials here
                                               TRUE ~ 0L))))
-# TODO: filter excludes practice trials from the dataframe. rewrite the function to keep them
+```
+
+# Check participants who completed the tasks more than once and the responses descriptive information
+
+```{r}
+participant_duplicate <-
+  map(raw$response,
+    . %>% 
+      select(participant_id, id, task, trialId, consentTime, isPractice, prop)) %>% 
+      reduce(., bind_rows) %>% 
+  group_by(participant_id, id, task, consentTime, isPractice, prop) %>% 
+  count() %>%
+  group_by(participant_id) %>% 
+  mutate(N = n(),
+         consentTime = as_datetime(consentTime / 1000, tz = "Europe/Prague")) %>% 
+  filter(N != 2)
+
+participant_duplicate
+```
+
+# Exclude duplicates
+* If the participant scored 0% on the first try we keep the second answer
+* If the participant scored more than 0% on the first try we keep the first try
+* We exclude the responses from tasks that were not sent to a given participant
+```{r}
+
 ```
 
 # Save task to individual dataframes
@@ -103,5 +154,38 @@ simon_raw <- raw %>% filter(task == "simon") %>% select(response) %>% unnest()
 
 # Calucalte the response time variable
 ```{r}
+primeprobe_raw <-
+  primeprobe_raw %>%
+  mutate(rt = responseTime - probeOffset)
 
+flanker_raw <-
+  flanker_raw %>%
+  mutate(rt = responseTime - stimOffset)
+
+stroop_raw <-
+  stroop_raw %>%
+  mutate(rt = responseTime - stimOnset)
+
+simon_raw <-
+  simon_raw %>%
+  mutate(rt = responseTime - stimOffset)
+```
+
+# Calucalte the mean response time and SD for exclusion
+```{r}
+primeprobe_raw <-
+  primeprobe_raw %>%
+  mutate(rt = responseTime - probeOffset)
+
+flanker_raw <-
+  flanker_raw %>%
+  mutate(rt = responseTime - stimOffset)
+
+stroop_raw <-
+  stroop_raw %>%
+  mutate(rt = responseTime - stimOnset)
+
+simon_raw <-
+  simon_raw %>%
+  mutate(rt = responseTime - stimOffset)
 ```
