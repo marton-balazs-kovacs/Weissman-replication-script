@@ -99,13 +99,13 @@ participant_id <-
   ungroup()
 ```
 
-## Exclusion criteria
+# Participant level exclusion
 
-* 1: The recorded response is only a trial response
+* 1: The recorded response is only a response coming from testing the program
 * 2: The unique identifier is missing
-* 3: The responses is collected during the first wave of the data collection in Hungary
+* 3: The responses are collected during the first wave of the data collection in Hungary
 
-### Number of responses per task without exclusion
+## Number of responses per task without exclusion
 
 ```{r}
 participant_id %>% 
@@ -113,16 +113,19 @@ participant_id %>%
   count()
 ```
 
-### number of responses after the first exclusion
+## Number of responses after the first exclusion
 
 ```{r}
+# UserIds to be deleted because they are responses from testing the program
+trial_response_id <- c("1", "DELETE", "x")
+
 participant_id %>% 
   filter(userId %ni% trial_response_id) %>% 
   group_by(task) %>% 
   count()
 ```
 
-### Number of responses after the second exclusion 
+## Number of responses after the second exclusion 
 
 ```{r}
 participant_id %>% 
@@ -132,7 +135,7 @@ participant_id %>%
   count()
 ```
 
-### Number of responses after the third exclusion 
+## Number of responses after the third exclusion 
 
 ```{r}
 participant_id %>% 
@@ -143,7 +146,7 @@ participant_id %>%
   count()
 ```
 
-### Checking the number of individual participants for each task
+## Checking the number of individual participants for each task
 ```{r}
 participant_id %>% 
   filter(userId %ni% trial_response_id) %>% 
@@ -154,7 +157,7 @@ participant_id %>%
   count()
 ```
 
-### Checking the duplicate responses from one participant
+## Checking the duplicate responses from one participant
 ```{r}
 # Save participants who completed the task more than once
 participant_duplicate <- 
@@ -201,10 +204,6 @@ source <-
 # Delete trial responses
 
 ```{r}
-# UserIds to be deleted
-trial_response_id <- c("1", "DELETE", "x")
-
-# Deleting userId
 source <-
   source %>% 
   mutate(join = map(join, ~ filter(., userId %ni% trial_response_id)))
