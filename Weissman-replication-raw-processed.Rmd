@@ -97,6 +97,16 @@ map(raw$response,
       count())
 ```
 
+# Save practice trials to a separate df and then drop them
+```{r}
+raw <-
+  raw %>%
+  mutate(practice = map(response,
+                        ~ filter(., isPractice == 1L)),
+         response = map(response,
+                        ~ filter(., isPractice == 0L)))
+```
+
 # Calculate accuracy in each task for each participant
 
 ```{r}
@@ -107,10 +117,9 @@ raw <-
                                                     responseTarget != responseContent ~ 0L))),
          response = map(response,
                      . %>% 
-                      group_by(participant_id, id, isPractice) %>% 
+                      group_by(participant_id, id) %>% 
                       mutate(prop = sum(correct) / n() * 100,
-                             drop = case_when(isPractice == 0L & prop < 70 ~ 1L,
-                                              isPractice == 1L ~ 1L, # drop practice trials here
+                             drop = case_when(prop < 70 ~ 1L,
                                               TRUE ~ 0L))))
 ```
 
@@ -120,24 +129,33 @@ raw <-
 participant_duplicate <-
   map(raw$response,
     . %>% 
-      select(participant_id, id, task, trialId, consentTime, isPractice, prop)) %>% 
+      select(participant_id, id, task, trialId, consentTime, prop)) %>% 
       reduce(., bind_rows) %>% 
-  group_by(participant_id, id, task, consentTime, isPractice, prop) %>% 
+  group_by(participant_id, id, task, consentTime, prop) %>% 
   count() %>%
   group_by(participant_id) %>% 
   mutate(N = n(),
          consentTime = as_datetime(consentTime / 1000, tz = "Europe/Prague")) %>% 
-  filter(N != 2)
+  filter(N != 1)
 
-participant_duplicate
+participant_duplicate %>% View()
 ```
 
-# Exclude duplicates
+# Exclude duplicate responses
+
 * If the participant scored 0% on the first try we keep the second answer
 * If the participant scored more than 0% on the first try we keep the first try
 * We exclude the responses from tasks that were not sent to a given participant
-```{r}
 
+```{r}
+participant_duplicate_drop <-
+  participant_duplicate %>%
+  filter(id %in% c(82, 77, 57, 8, 84)) %>% 
+  select(participant_id, id)
+
+raw <- 
+  raw %>%
+  mutate(test = map(response, ~ anti_join(., participant_duplicate_drop, by = c("participant_id", "id"))))
 ```
 
 # Save task to individual dataframes
@@ -173,19 +191,92 @@ simon_raw <-
 
 # Calucalte the mean response time and SD for exclusion
 ```{r}
+primeprobe_rt_exclude <-
+  primeprobe_raw %>%
+  group_by(participant_id) %>% 
+  summarise(rt_mean = mean(rt, na.rm = T),
+            rt_sd = sd(rt, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(rt_mean_grand = mean(rt_mean),
+         rt_sd_grand = sd(rt_mean),
+         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
+                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
+                          TRUE ~ 0L)) %>% 
+  filter(drop == 1L) %>% 
+  pull(participant_id)
+
+flanker_rt_exclude <-
+  flanker_raw %>%
+  group_by(participant_id) %>% 
+  summarise(rt_mean = mean(rt, na.rm = T),
+            rt_sd = sd(rt, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(rt_mean_grand = mean(rt_mean),
+         rt_sd_grand = sd(rt_mean),
+         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
+                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
+                          TRUE ~ 0L)) %>% 
+  filter(drop == 1L) %>% 
+  pull(participant_id)
+
+stroop_rt_exclude <-
+  stroop_raw %>%
+  group_by(participant_id) %>% 
+  summarise(rt_mean = mean(rt, na.rm = T),
+            rt_sd = sd(rt, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(rt_mean_grand = mean(rt_mean),
+         rt_sd_grand = sd(rt_mean),
+         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
+                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
+                          TRUE ~ 0L)) %>% 
+  filter(drop == 1L) %>% 
+  pull(participant_id)
+
+simon_rt_exclude <-
+  simon_raw %>%
+  group_by(participant_id) %>% 
+  summarise(rt_mean = mean(rt, na.rm = T),
+            rt_sd = sd(rt, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(rt_mean_grand = mean(rt_mean),
+         rt_sd_grand = sd(rt_mean),
+         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
+                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
+                          TRUE ~ 0L)) %>% 
+  filter(drop == 1L) %>% 
+  pull(participant_id)
+```
+
+# Participant level exclusion
+
+* 1: mean accuracy on their respective task was below 70%
+* 2: mean reaction time was more than 2.5 SDs away from the mean of their group
+
+
+```{r}
 primeprobe_raw <-
   primeprobe_raw %>%
-  mutate(rt = responseTime - probeOffset)
+  filter(participant_id %ni% primeprobe_rt_exclude,
+         drop == 0L)
+```
 
-flanker_raw <-
-  flanker_raw %>%
-  mutate(rt = responseTime - stimOffset)
+# Trial level exclusion for rt analysis
+* 1: Error trials
+* 2: Trials following error trials
+* 3: Outliers, trials 2.5 SDs away from the conditional mean of the participant
+* 4: Trials following outlier trials
 
-stroop_raw <-
-  stroop_raw %>%
-  mutate(rt = responseTime - stimOnset)
+```{r}
+primeprobe_rt_raw <-
+  primeprobe_raw
+```
 
-simon_raw <-
-  simon_raw %>%
-  mutate(rt = responseTime - stimOffset)
+# Trial level exclusion for error analysis
+* 1: Outliers, trials 2.5 SDs away from the conditional mean of the participant
+* 2: Trials following outlier trials
+
+```{r}
+primeprobe_error_raw <-
+  primeprobe_raw
 ```
