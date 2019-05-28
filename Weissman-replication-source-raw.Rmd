@@ -79,6 +79,108 @@ source <-
 participant_id <- read_csv("data/Source/participant-metadata.csv")
 ```
 
+# Creating anonym id to link participants to responses
+# Create a variable to divide response from the first wave of data collection from the second wave in the Hungarian sample
+
+```{r}
+participant_id <- 
+  participant_id %>% 
+  mutate(userId = if_else(userId == "abcdef12345",
+                          paste0("abcdef12345", row_number()),
+                          userId),
+         wave = case_when(loc == "HUN" &
+                          ymd("2019-05-07", tz = "Europe/Prague") >
+                          as_datetime(consentTime / 1000, tz = "Europe/Prague") ~ 1L,
+                          loc == "HUN" & ymd("2019-05-07", tz = "Europe/Prague") <=
+                          as_datetime(consentTime / 1000, tz = "Europe/Prague") ~ 2L,
+                          loc == "CZ" ~ 1L)) %>% 
+  group_by(userId) %>% 
+  mutate(participant_id = group_indices()) %>%
+  ungroup()
+```
+
+## Exclusion criteria
+
+* 1: The recorded response is only a trial response
+* 2: The unique identifier is missing
+* 3: The responses is collected during the first wave of the data collection in Hungary
+
+### Number of responses per task without exclusion
+
+```{r}
+participant_id %>% 
+  group_by(task) %>% 
+  count()
+```
+
+### number of responses after the first exclusion
+
+```{r}
+participant_id %>% 
+  filter(userId %ni% trial_response_id) %>% 
+  group_by(task) %>% 
+  count()
+```
+
+### Number of responses after the second exclusion 
+
+```{r}
+participant_id %>% 
+  filter(userId %ni% trial_response_id) %>% 
+  filter(!is.na(userId)) %>%
+  group_by(task) %>% 
+  count()
+```
+
+### Number of responses after the third exclusion 
+
+```{r}
+participant_id %>% 
+  filter(userId %ni% trial_response_id) %>% 
+  filter(!is.na(userId)) %>%
+  filter(wave == 1L) %>% 
+  group_by(task) %>% 
+  count()
+```
+
+### Checking the number of individual participants for each task
+```{r}
+participant_id %>% 
+  filter(userId %ni% trial_response_id) %>% 
+  filter(!is.na(userId)) %>%
+  filter(wave == 1L) %>% 
+  group_by(task) %>% 
+  distinct(participant_id) %>% 
+  count()
+```
+
+### Checking the duplicate responses from one participant
+```{r}
+# Save participants who completed the task more than once
+participant_duplicate <- 
+  participant_id %>% 
+  filter(userId %ni% trial_response_id) %>% 
+  filter(!is.na(userId)) %>%
+  filter(wave == 1L) %>% 
+  group_by(participant_id) %>% 
+  count() %>% 
+  filter(n != 1)
+
+participant_duplicate
+
+# Show the descriptive data of the duplicate responses
+participant_id %>% 
+  filter(participant_id %in% pull(participant_duplicate, participant_id)) %>%
+  mutate(consentTime = as_datetime(consentTime / 1000, tz = "Europe/Prague")) %>% 
+  select(participant_id,
+         id,
+         task,
+         consentTime)
+
+# Participant 393 somehow completed the stroop task and the primeprobe task as well
+# Originally he recieved invitation for the primeprobe
+```
+
 # Join demographics data with responses
 
 ```{r join demographic data}
@@ -88,33 +190,12 @@ source <-
   mutate(join = map2(response, demographics, ~ left_join(.x, .y, by = c("id", "task", "data_type"))))
 ```
 
-# Creating anonym id to link participants to responses
-
-```{r}
-participant_id <- 
-  participant_id %>% 
-  mutate(userId = if_else(userId == "abcdef12345",
-                          paste0("abcdef12345", row_number()),
-                          userId)) %>% 
-  group_by(userId) %>% 
-  mutate(participant_id = group_indices())
-```
-
-# Checking the number of participants for each task
-
-```{r}
-participant_id %>% 
-  group_by(task) %>% 
-  distinct(userId) %>% 
-  count()
-```
-
 # Join data with participant_id
 
 ```{r join participant id}
 source <- 
   source %>%
-  mutate(join_id = map(join, ~ join_df(., participant_id)))
+  mutate(join = map(join, ~ join_df(., participant_id)))
 ```
 
 # Delete trial responses
@@ -126,7 +207,7 @@ trial_response_id <- c("1", "DELETE", "x")
 # Deleting userId
 source <-
   source %>% 
-  mutate(filtered = map(join_id, ~ filter(., userId %ni% trial_response_id)))
+  mutate(join = map(join, ~ filter(., userId %ni% trial_response_id)))
 ```
 
 # Delete cases where the userId is missing
@@ -134,47 +215,32 @@ source <-
 ```{r}
 source <- 
   source %>% 
-  mutate(filtered = map(filtered, ~ filter(., !is.na(userId))))
+  mutate(join = map(join, ~ filter(., !is.na(userId))))
 ```
 
-# Deidentify participatns
+# Deidentify participants
 
 ```{r}
 source <- 
   source %>% 
-  mutate(filtered = map(filtered, ~ select(., -userId, -debriefGeneralComments)))
-```
-
-# Create a variable to divide response from the first wave of data collection from the second wave in the Hungarian sample
-```{r}
-source <- 
-  source %>% 
-  mutate(filtered = map(filtered,
-                    ~ mutate(.,
-                             wave = case_when(loc == "HUN" & ymd("2019-05-07", tz = "Europe/Prague") > as_datetime(consentTime / 1000, tz = "Europe/Prague") ~ 1L,
-                                              loc == "HUN" & ymd("2019-05-07", tz = "Europe/Prague") <= as_datetime(consentTime / 1000, tz = "Europe/Prague") ~ 2L,
-                                              loc == "CZ" ~ 1L)
-                             )
-                    )
-         )
-
+  mutate(join = map(join, ~ select(., -userId, -debriefGeneralComments)))
 ```
 
 # Keep only data from wave 1
 ```{r}
 source <- 
   source %>% 
-  mutate(filtered = map(filtered, ~ filter(., wave == 1L)))
+  mutate(join = map(join, ~ filter(., wave == 1L)))
 ```
 
 # Save each task separately
 ## TODO: Write function for this task
 ```{r save tasks}
-write_tsv(unnest(source$filtered[[1]]), path = paste0("data/Raw/", source$task[[1]], "/", source$task[[1]], "_data.tsv"))
+write_tsv(unnest(source$join[[1]]), path = paste0("data/Raw/", source$task[[1]], "/", source$task[[1]], "_data.tsv"))
 
-write_tsv(unnest(source$filtered[[2]]), path = paste0("data/Raw/", source$task[[2]], "/", source$task[[2]], "_data.tsv"))
+write_tsv(unnest(source$join[[2]]), path = paste0("data/Raw/", source$task[[2]], "/", source$task[[2]], "_data.tsv"))
 
-write_tsv(unnest(source$filtered[[3]]), path = paste0("data/Raw/", source$task[[3]], "/", source$task[[3]], "_data.tsv"))
+write_tsv(unnest(source$join[[3]]), path = paste0("data/Raw/", source$task[[3]], "/", source$task[[3]], "_data.tsv"))
 
-write_tsv(unnest(source$filtered[[4]]), path = paste0("data/Raw/", source$task[[4]], "/", source$task[[4]], "_data.tsv"))
+write_tsv(unnest(source$join[[4]]), path = paste0("data/Raw/", source$task[[4]], "/", source$task[[4]], "_data.tsv"))
 ```
