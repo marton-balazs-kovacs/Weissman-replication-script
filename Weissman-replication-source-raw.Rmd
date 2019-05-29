@@ -281,3 +281,5 @@ source %>%
   by_row(write_tdf2)
 
 ```
+
+Final tdfs were uploaded to OSF manually.
