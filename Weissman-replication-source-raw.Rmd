@@ -11,6 +11,7 @@ output: html_document
 library(tidyverse)
 library(janitor)
 library(osfr)
+library(purrrlyr)
 ```
 
 # Load helper functions
@@ -55,7 +56,7 @@ data_files %>%
 
 # Import and merge data
 
-```{r}
+```{r import and merge data}
 # Saving subfolder names
 subfolder <- list("primeprobe", "flanker", "stroop", "simon")
 
@@ -76,19 +77,39 @@ source <-
                                    sep = ",")))
 
 # Read in participant identifiers data
-participant_id <- read_csv("data/Source/participant-metadata.csv")
+participant_id <- read_csv("data/Source/participant-metadata.csv", 
+                           col_types = cols(loc = col_character(), # Location of the participant
+                                            task = col_character(), # which task was the participant assigned to
+                                            consentTime = col_double(), # time of consent
+                                            eventLog = col_character(), # event log
+                                            debriefGeneralComments = col_character(), # optional comments about the task.
+                                            userId = col_character(), # user id of the participant. This value was specific in each location
+                                            id = col_double() # id of the participant with respect to given task
+))
 ```
 
-# Creating anonym id to link participants to responses
-# Create a variable to divide response from the first wave of data collection from the second wave in the Hungarian sample
+# Creating anonymous id to link participants to responses
 
-```{r}
+In Czech sample, the participants were instructed to use their user id from the experiment recruitment system. However, several subjects (N=`r participant_id %>% filter(userId == "abcdef12345") %>% nrow()`) filled the example code from the instruction email. We were able to confirm by email communication with the particpants that each code represented unique participant and therefore we are adding row number to this userid to create unique participant id.
+
+```{r anonymous userId }
 participant_id <- 
   participant_id %>% 
   mutate(userId = if_else(userId == "abcdef12345",
                           paste0("abcdef12345", row_number()),
-                          userId),
-         wave = case_when(loc == "HUN" &
+                          userId))
+```
+
+# Create a variable to divide response from the first wave of data collection from the second wave in the Hungarian sample
+
+Data collection in HUN sample was run in two waves.
+
+Also we create unique participant_id irrespective to the experiment their were assigned.
+
+```{r add wave variable}
+participant_id <- 
+  participant_id %>% 
+  mutate(wave = case_when(loc == "HUN" &
                           ymd("2019-05-07", tz = "Europe/Prague") >
                           as_datetime(consentTime / 1000, tz = "Europe/Prague") ~ 1L,
                           loc == "HUN" & ymd("2019-05-07", tz = "Europe/Prague") <=
@@ -107,13 +128,15 @@ participant_id <-
 
 ## Number of responses per task without exclusion
 
-```{r}
+```{r number of responses}
 participant_id %>% 
   group_by(task) %>% 
   count()
 ```
 
 ## Number of responses after the first exclusion
+
+How many participants do we have when we just remove testing responses
 
 ```{r}
 # UserIds to be deleted because they are responses from testing the program
@@ -127,7 +150,9 @@ participant_id %>%
 
 ## Number of responses after the second exclusion 
 
-```{r}
+How many participants do we have when we just remove testing responses and missing userIds
+
+```{r number of responses after second exlusion}
 participant_id %>% 
   filter(userId %ni% trial_response_id) %>% 
   filter(!is.na(userId)) %>%
@@ -137,7 +162,9 @@ participant_id %>%
 
 ## Number of responses after the third exclusion 
 
-```{r}
+How many participants do we have when we just remove testing responses and missing userIds and we only use wave 1
+
+```{r number of responses after third exlusion}
 participant_id %>% 
   filter(userId %ni% trial_response_id) %>% 
   filter(!is.na(userId)) %>%
@@ -147,7 +174,10 @@ participant_id %>%
 ```
 
 ## Checking the number of individual participants for each task
-```{r}
+
+This code gets number of participant per each task, if we use only unique userId. Ideally, we should get same values as the code above this.
+
+```{r check number of participants in each task}
 participant_id %>% 
   filter(userId %ni% trial_response_id) %>% 
   filter(!is.na(userId)) %>%
@@ -157,8 +187,13 @@ participant_id %>%
   count()
 ```
 
+Unfortunately, this is not the case. We have some duplicates.
+
 ## Checking the duplicate responses from one participant
-```{r}
+
+
+
+```{r check duplicate responses}
 # Save participants who completed the task more than once
 participant_duplicate <- 
   participant_id %>% 
@@ -169,20 +204,21 @@ participant_duplicate <-
   count() %>% 
   filter(n != 1)
 
-participant_duplicate
+participant_duplicate %>% knitr::kable(caption = "Number of duplicate responses")
 
 # Show the descriptive data of the duplicate responses
 participant_id %>% 
   filter(participant_id %in% pull(participant_duplicate, participant_id)) %>%
   mutate(consentTime = as_datetime(consentTime / 1000, tz = "Europe/Prague")) %>% 
-  select(participant_id,
+  select(loc,
+         participant_id,
          id,
          task,
-         consentTime)
+         consentTime) %>% knitr::kable(caption = "Duplicate responses")
 
-# Participant 393 somehow completed the stroop task and the primeprobe task as well
-# Originally he recieved invitation for the primeprobe
+
 ```
+Participant 393 somehow completed the stroop task and the primeprobe task as well. Originally he recieved invitation for the primeprobe
 
 # Join demographics data with responses
 
@@ -203,7 +239,7 @@ source <-
 
 # Delete trial responses
 
-```{r}
+```{r delete trial responses}
 source <-
   source %>% 
   mutate(join = map(join, ~ filter(., userId %ni% trial_response_id)))
@@ -211,7 +247,7 @@ source <-
 
 # Delete cases where the userId is missing
 
-```{r}
+```{r delete empty userid}
 source <- 
   source %>% 
   mutate(join = map(join, ~ filter(., !is.na(userId))))
@@ -219,27 +255,29 @@ source <-
 
 # Deidentify participants
 
-```{r}
+We need to remove any information that might identify the participants
+
+```{r deidentify participants}
 source <- 
   source %>% 
   mutate(join = map(join, ~ select(., -userId, -debriefGeneralComments)))
 ```
 
 # Keep only data from wave 1
-```{r}
+
+We are keeping data only from wave 1
+
+```{r keep data only from wave 1}
 source <- 
   source %>% 
   mutate(join = map(join, ~ filter(., wave == 1L)))
 ```
 
 # Save each task separately
-## TODO: Write function for this task
+
 ```{r save tasks}
-write_tsv(unnest(source$join[[1]]), path = paste0("data/Raw/", source$task[[1]], "/", source$task[[1]], "_data.tsv"))
 
-write_tsv(unnest(source$join[[2]]), path = paste0("data/Raw/", source$task[[2]], "/", source$task[[2]], "_data.tsv"))
+source %>% 
+  by_row(write_tdf2)
 
-write_tsv(unnest(source$join[[3]]), path = paste0("data/Raw/", source$task[[3]], "/", source$task[[3]], "_data.tsv"))
-
-write_tsv(unnest(source$join[[4]]), path = paste0("data/Raw/", source$task[[4]], "/", source$task[[4]], "_data.tsv"))
 ```
