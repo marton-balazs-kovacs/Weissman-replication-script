@@ -121,6 +121,26 @@ join_df <- function(df_nest, df_unnest, var_by = c("id", "task", "consentTime"))
   left_join(df_nest, df_unnest, by = var_by)
 }
 
+#' Writes experimental data into tdf format
+#' 
+#' This function is meant to be run for each row containing experimental data
+#'
+#' @param x  row of "source" data frame
+#'
+#' @return
+#' this function is useful for its side effect
+#' @export
+#'
+#' @examples
+#' 
+#' source df was created using steps in the markdown document
+#' 
+#' source %>% 
+#'   by_row(write_tdf2)
+write_tdf2 <- function(x) {
+  write_tsv(unnest(x$join[[1]]), path = paste0("data/Raw/", x$task[[1]], "/", x$task[[1]], "_data.tsv"))
+}
+
 #' Function to not include a vector in another vector
 #' Retrieved from https://stackoverflow.com/questions/5831794/opposite-of-in
 #' 
