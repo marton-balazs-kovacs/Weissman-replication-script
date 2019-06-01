@@ -155,7 +155,54 @@ participant_duplicate_drop <-
 
 raw <- 
   raw %>%
-  mutate(test = map(response, ~ anti_join(., participant_duplicate_drop, by = c("participant_id", "id"))))
+  mutate(response = map(response,
+                        ~ anti_join(., participant_duplicate_drop, by = c("participant_id", "id"))))
+```
+
+# Calucalte the response time variable
+
+```{r}
+raw$response[[1]] <-
+  raw %>% 
+  filter(task == "primeprobe") %>% 
+  unnest(response) %>%
+  mutate(rt = responseTime - probeOffset)
+
+raw$response[[2]] <- 
+  raw %>% 
+  filter(task == "flanker") %>% 
+  unnest(response) %>%
+  mutate(rt = responseTime - stimOffset)
+
+raw$response[[3]] <-
+  raw %>%
+  filter(task == "stroop") %>% 
+  unnest(response) %>%
+  mutate(rt = responseTime - stimOnset)
+
+raw$response[[4]] <-
+  raw %>%
+  filter(task == "simon") %>% 
+  unnest(response) %>%
+  mutate(rt = responseTime - stimOffset)
+```
+
+# Calucalte the mean response time and SD for exclusion
+
+```{r}
+raw <-
+  raw %>%
+  mutate(rt_outliers = map(response,
+                        . %>%
+                          group_by(participant_id) %>% 
+                          summarise(rt_mean = mean(rt, na.rm = T),
+                                    rt_sd = sd(rt, na.rm = T)) %>% 
+                          ungroup() %>%
+                          mutate(rt_mean_grand = mean(rt_mean),
+                                 rt_sd_grand = sd(rt_mean),
+                                 rt_drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
+                                                     rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
+                                                     TRUE ~ 0L))))
 ```
 
 # Save task to individual dataframes
@@ -168,86 +215,6 @@ flanker_raw <- raw %>% filter(task == "flanker") %>% select(response) %>% unnest
 stroop_raw <- raw %>% filter(task == "stroop") %>% select(response) %>% unnest()
 
 simon_raw <- raw %>% filter(task == "simon") %>% select(response) %>% unnest()
-```
-
-# Calucalte the response time variable
-## NOTE: Maybe this can be done in a for loop before dividing the list of df into separate objects by tasks
-```{r}
-primeprobe_raw <-
-  primeprobe_raw %>%
-  mutate(rt = responseTime - probeOffset)
-
-flanker_raw <-
-  flanker_raw %>%
-  mutate(rt = responseTime - stimOffset)
-
-stroop_raw <-
-  stroop_raw %>%
-  mutate(rt = responseTime - stimOnset)
-
-simon_raw <-
-  simon_raw %>%
-  mutate(rt = responseTime - stimOffset)
-```
-
-# Calucalte the mean response time and SD for exclusion
-## NOTE: Then this can be done with one line
-```{r}
-primeprobe_rt_exclude <-
-  primeprobe_raw %>%
-  group_by(participant_id) %>% 
-  summarise(rt_mean = mean(rt, na.rm = T),
-            rt_sd = sd(rt, na.rm = T)) %>% 
-  ungroup() %>% 
-  mutate(rt_mean_grand = mean(rt_mean),
-         rt_sd_grand = sd(rt_mean),
-         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
-                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
-                          TRUE ~ 0L)) %>% 
-  filter(drop == 1L) %>% 
-  pull(participant_id)
-
-flanker_rt_exclude <-
-  flanker_raw %>%
-  group_by(participant_id) %>% 
-  summarise(rt_mean = mean(rt, na.rm = T),
-            rt_sd = sd(rt, na.rm = T)) %>% 
-  ungroup() %>% 
-  mutate(rt_mean_grand = mean(rt_mean),
-         rt_sd_grand = sd(rt_mean),
-         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
-                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
-                          TRUE ~ 0L)) %>% 
-  filter(drop == 1L) %>% 
-  pull(participant_id)
-
-stroop_rt_exclude <-
-  stroop_raw %>%
-  group_by(participant_id) %>% 
-  summarise(rt_mean = mean(rt, na.rm = T),
-            rt_sd = sd(rt, na.rm = T)) %>% 
-  ungroup() %>% 
-  mutate(rt_mean_grand = mean(rt_mean),
-         rt_sd_grand = sd(rt_mean),
-         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
-                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
-                          TRUE ~ 0L)) %>% 
-  filter(drop == 1L) %>% 
-  pull(participant_id)
-
-simon_rt_exclude <-
-  simon_raw %>%
-  group_by(participant_id) %>% 
-  summarise(rt_mean = mean(rt, na.rm = T),
-            rt_sd = sd(rt, na.rm = T)) %>% 
-  ungroup() %>% 
-  mutate(rt_mean_grand = mean(rt_mean),
-         rt_sd_grand = sd(rt_mean),
-         drop = case_when(rt_mean_grand + rt_sd_grand < rt_mean ~ 1L,
-                          rt_mean_grand - rt_sd_grand > rt_mean ~ 1L,
-                          TRUE ~ 0L)) %>% 
-  filter(drop == 1L) %>% 
-  pull(participant_id)
 ```
 
 # Participant level exclusion
