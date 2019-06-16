@@ -125,7 +125,9 @@ join_df <- function(df_nest, df_unnest, var_by = c("id", "task", "consentTime"))
 #' 
 #' This function is meant to be run for each row containing experimental data
 #'
-#' @param x  row of "source" data frame
+#' @param data_column column that contains the data
+#' @param id_column column that contains the ids of dataframes
+#' @param folder_path path to folder where to save data
 #'
 #' @return
 #' this function is useful for its side effect
@@ -135,10 +137,8 @@ join_df <- function(df_nest, df_unnest, var_by = c("id", "task", "consentTime"))
 #' 
 #' source df was created using steps in the markdown document
 #' 
-#' source %>% 
-#'   by_row(write_tdf2)
-write_tdf2 <- function(x) {
-  write_tsv(unnest(x$join[[1]]), path = paste0("data/Raw/", x$task[[1]], "/", x$task[[1]], "_data.tsv"))
+write_tdf2 <- function(data_column, id_column, folder_path) {
+  write_tsv(data_column, path = paste0(folder_path, id_column, "/", id_column, "_data.tsv"))
 }
 
 #' Function to not include a vector in another vector
