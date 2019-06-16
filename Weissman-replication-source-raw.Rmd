@@ -276,10 +276,10 @@ source <-
 # Save each task separately
 
 ```{r save tasks}
-
-source %>% 
-  by_row(write_tdf2)
-
+walk2(source$join, source$task,
+      ~ write_tdf2(data_column = .x,
+                   id_column = .y,
+                   folder_path = "data/Raw/"))
 ```
 
 Final tdfs were uploaded to OSF manually.
