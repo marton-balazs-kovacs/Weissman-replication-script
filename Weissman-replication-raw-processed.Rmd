@@ -10,9 +10,9 @@ output: html_document
 ```{r load packages}
 library(tidyverse)
 library(janitor)
-library(purrrlyr)
 library(osfr)
 library(lubridate)
+library(purrrlyr)
 ```
 
 # Load helper functions
@@ -97,9 +97,9 @@ map(raw$response,
       count())
 ```
 
-# Save practice trials to a separate df and then drop them
+# Save practice trials to a separate df
 
-```{r}
+```{r save test trials}
 raw <-
   raw %>%
   mutate(practice = map(response,
@@ -110,18 +110,19 @@ raw <-
 
 # Calculate accuracy in each task for each participant
 
-```{r}
+```{r calculate accuracy}
 raw <-
   raw %>%
   mutate(response = map(response,
-                    ~ mutate(., isCorrect = case_when(responseTarget == responseContent ~ 1L,
+                    ~ mutate(.,
+                             isCorrect = case_when(responseTarget == responseContent ~ 1L,
                                                     responseTarget != responseContent ~ 0L))),
          response = map(response,
                      . %>% 
                       group_by(participant_id, id) %>% 
                       mutate(prop = sum(isCorrect) / n() * 100,
                              dropParticipantAcc = case_when(prop < 70 ~ 1L,
-                                              TRUE ~ 0L))))
+                                                            TRUE ~ 0L))))
 ```
 
 # Check participants who completed the tasks more than once and show the responses descriptive information
@@ -129,9 +130,9 @@ raw <-
 ```{r}
 participant_duplicate <-
   map(raw$response,
-    . %>% 
-      select(participant_id, id, task, trialId, consentTime, prop)) %>% 
-      reduce(., bind_rows) %>% 
+      . %>% 
+        select(participant_id, id, task, trialId, consentTime, prop)) %>%
+  reduce(., bind_rows) %>% 
   group_by(participant_id, id, task, consentTime, prop) %>% 
   count() %>%
   group_by(participant_id) %>% 
@@ -162,7 +163,8 @@ raw <-
 
 # Calucalte the response time variable
 
-```{r}
+```{r calculate response time}
+## Primeprobe task
 raw$response[[1]] <-
   raw %>% 
   filter(task == "primeprobe") %>% 
@@ -170,6 +172,7 @@ raw$response[[1]] <-
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - probeOffset,
                         responseContent == "TIMEOUT" ~ NA_real_))
 
+## Flanker
 raw$response[[2]] <- 
   raw %>% 
   filter(task == "flanker") %>% 
@@ -177,6 +180,7 @@ raw$response[[2]] <-
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOffset,
                         responseContent == "TIMEOUT" ~ NA_real_))
 
+# Stroop
 raw$response[[3]] <-
   raw %>%
   filter(task == "stroop") %>% 
@@ -184,6 +188,7 @@ raw$response[[3]] <-
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
                         responseContent == "TIMEOUT" ~ NA_real_))
 
+# Simon
 raw$response[[4]] <-
   raw %>%
   filter(task == "simon") %>% 
@@ -192,9 +197,9 @@ raw$response[[4]] <-
                         responseContent == "TIMEOUT" ~ NA_real_))
 ```
 
-# Add variable storing previous congruency
+# Add variables storing whether the previous trials were congruent and correct
 
-```{r}
+```{r previous congruency}
 raw <-
   raw %>%
   mutate(response = map(response,
@@ -208,41 +213,71 @@ raw <-
                                                            trialId > 24 & lag(isCorrect) == 0L ~ 0L))))
 ```
 
-# Calucalte the mean response time and SD for exclusion
-## TODO: Write code to filter out participants first who only have TIMEOUT trials because mean function returns NaN in that case like participant_id == 80
+# Calucalate grand mean and sd rt
 
+```{r calculate grand mean}
+raw <- 
+  raw %>% 
+  mutate(response = map(response,
+                        . %>% 
+                          ungroup() %>% 
+                          mutate(rtGrandMean = mean(rt, na.rm = T),
+                                 rtGrandSd = sd(rt, na.rm = T))))
+```
+
+# Exclude trials where all the trials are time out trials
 ```{r}
+raw <-
+  raw %>%
+  mutate(rtAllMissing = map(response,
+                            . %>% 
+                              group_by(participant_id) %>% 
+                              summarise(dropAllMissingRt = case_when(all(is.na(rt)) ~ 1L,
+                                                                     TRUE ~ 0L))),
+         response = map2(response, rtAllMissing,
+                         ~ left_join(.x, .y, by = "participant_id") %>% 
+                           filter(dropAllMissingRt == 0L))) # Dropping trials
+```
+
+# Calucalte the mean response time and SD for exclusion
+
+```{r calculate mean response time}
 raw <-
   raw %>%
   mutate(rtParticipantOutliers = map(response,
                                      . %>%
                                        group_by(participant_id) %>% 
                                        summarise(rtParticipantMean = mean(rt, na.rm = T),
-                                                 rtParticipantSd = sd(rt, na.rm = T)) %>% 
-                                       ungroup() %>%
-                                       mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
-                                              rtGrandSd = sd(rtParticipantMean, na.rm = T),
-                                              dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
-                                                                            rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
-                                                                            TRUE ~ 0L))),
-         response = map2(response, rtParticipantOutliers,
-                         ~ left_join(.x, .y, by = "participant_id")),
+                                                 rtParticipantSd = sd(rt, na.rm = T))),
          rtTrialOutliers = map(response,
                                . %>% 
                                  filter(!is.na(isPrevCongruent)) %>% 
                                  group_by(participant_id, isCongruent, isPrevCongruent) %>% 
                                  summarise(rtConditionalMean = mean(rt, na.rm = T),
                                            rtConditionalSd = sd(rt, na.rm = T))),
-         response = map2(response, rtTrialOutliers,
-                         ~ left_join(.x, .y, by = c("participant_id", "isCongruent", "isPrevCongruent"))),
-         response = map(response,
+         response = pmap(response, rtParticipantOutliers, rtTrialOutliers, 
+                         ~ left_join(.x, .y, by = "participant_id") %>% 
+                           left_join(., .z, by = c("participant_id", "isCongruent", "isPrevCongruent"))))
+```
+
+# Create variable that stores whether a participant or a trial should be dropped based on the rt criteria
+
+```{r}
+raw <-
+  raw %>%
+  mutate(response = map(response,
                         . %>% 
+                          group_by(participant_id) %>% 
                           mutate(dropTrialRt = case_when(rtParticipantMean + 2.5 * rtParticipantSd < rtConditionalMean ~ 1L,
                                                          rtParticipantMean - 2.5 * rtParticipantSd > rtConditionalMean ~ 1L,
-                                                         is.na(rtParticipantMean) & is.na(rtParticipantMean) ~ 1L,
-                                                         TRUE ~ 0L))))
-raw$rtTrialOutliers[[1]] %>% View()
-raw$response[[1]] %>% View()
+                                                         is.na(isPrevCongruent) ~ 1L,
+                                                         TRUE ~ 0L),
+                                 isPrevDropTrialRt = case_when(trialId == 24 ~ NA_integer_,
+                                                               trialId > 24 & lag(dropTrialRt) == 1L ~ 1L,
+                                                               trialId > 24 & lag(dropTrialRt) == 0L ~ 0L),
+                                 dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
+                                                               rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
+                                                               TRUE ~ 0L))))
 ```
 
 # Participant level exclusion
@@ -250,13 +285,13 @@ raw$response[[1]] %>% View()
 * 1: mean accuracy on their respective task was below 70%
 * 2: mean reaction time was more than 2.5 SDs away from the mean of their group
 
-```{r}
+```{r participant level exclusion}
 raw <-
   raw %>%
   mutate(response = map(response,
                     ~ filter(.,
-                             dropParticipantAcc == 1L,
-                             dropParticipantRt == 1L)))
+                             dropParticipantAcc == 0L,
+                             dropParticipantRt  == 0L)))
 ```
 
 # Trial level exclusion for rt analysis
@@ -267,29 +302,46 @@ raw <-
 * 4: Outliers, trials 2.5 SDs away from the conditional mean of the participant
 * 5: Trials following outlier trials
 
-```{r}
-#raw <-
-  #raw %>% 
- # mutate(response = )
+```{r trial level exclusion reaction time}
+raw <-
+  raw %>% 
+  mutate(responseRtAnalysis = map(response,
+                                  ~ filter(.,
+                                           !is.na(PrevCongruent),     # 1 exclusion criteria
+                                           isCorrect         == 1L,   # 2 exclusion criteria
+                                           isPrevCorrect     == 1L,   # 3 exclusion criteria
+                                           dropTrialRt       == 0L,   # 4 exclusion criteria
+                                           isPrevDropTrialRt == 0L))) # 5 exclusion criteria
 ```
 
 # Trial level exclusion for error analysis
-* 1: Outliers, trials 2.5 SDs away from the conditional mean of the participant
-* 2: Trials following outlier trials
-* 3: First trial for each participant
 
-```{r}
+* 1: First trial for each participant
+* 2: Outliers, trials 2.5 SDs away from the conditional mean of the participant
+* 3: Trials following outlier trials
 
+```{r trial level exclusion error}
+raw <-
+  raw %>% 
+  mutate(responseAccAnalysis = map(response,
+                                   ~ filter(.,
+                                            !is.na(PrevCongruent),     # 1 exclusion criteria
+                                            dropTrialRt       == 0L,   # 2 exclusion criteria
+                                            isPrevDropTrialRt == 0L))) # 3 exclusion criteria
 ```
 
 # Save task to individual dataframes
-## TODO: Rewrite this with a function
-```{r}
-primeprobe_raw <- raw %>% filter(task == "primeprobe") %>% select(response) %>% unnest()
 
-flanker_raw <- raw %>% filter(task == "flanker") %>% select(response) %>% unnest()
+```{r save tasks}
+# Saving data for the reaction time analysis
+walk2(raw$responseRtAnalysis, raw$task,
+      ~ write_tdf2(data_column = .x,
+                   id_column = .y,
+                   folder_path = "data/Processed/"))
 
-stroop_raw <- raw %>% filter(task == "stroop") %>% select(response) %>% unnest()
-
-simon_raw <- raw %>% filter(task == "simon") %>% select(response) %>% unnest()
+# Saving data for the accuracy analysis
+walk2(raw$responseAccAnalysis, raw$task,
+      ~ write_tdf2(data_column = .x,
+                   id_column = .y,
+                   folder_path = "data/Processed/"))
 ```
