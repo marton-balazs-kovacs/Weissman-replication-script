@@ -215,8 +215,6 @@ participant_id %>%
          id,
          task,
          consentTime) %>% knitr::kable(caption = "Duplicate responses")
-
-
 ```
 Participant 393 somehow completed the stroop task and the primeprobe task as well. Originally he recieved invitation for the primeprobe
 
