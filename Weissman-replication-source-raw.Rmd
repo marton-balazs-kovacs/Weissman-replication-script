@@ -191,8 +191,6 @@ Unfortunately, this is not the case. We have some duplicates.
 
 ## Checking the duplicate responses from one participant
 
-
-
 ```{r check duplicate responses}
 # Save participants who completed the task more than once
 participant_duplicate <- 
@@ -216,6 +214,7 @@ participant_id %>%
          task,
          consentTime) %>% knitr::kable(caption = "Duplicate responses")
 ```
+
 Participant 393 somehow completed the stroop task and the primeprobe task as well. Originally he recieved invitation for the primeprobe
 
 # Join demographics data with responses
