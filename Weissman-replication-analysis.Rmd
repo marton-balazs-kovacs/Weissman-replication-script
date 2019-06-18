@@ -1,0 +1,93 @@
+---
+title: "Weissman-replication-analysis"
+author: "Marton Kovacs"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Load packages
+
+```{r load packages}
+library(tidyverse)
+library(osfr)
+library(lme4)
+library(BayesFactor)
+```
+
+# Load helper functions
+
+```{r load helper functions}
+source("utils.R")
+```
+
+# Download data from OSF
+## OSF auth (until project is public)
+osf_auth(token = read_lines("osf_token_write_martonbalazskovacs.txt"))
+```{r osf authentication}
+```
+
+## Connect to data OSF folder
+```{r osf connect to OSF folder}
+data_guid <- "9knds"
+
+weissman_project <- osf_retrieve_node(data_guid)
+```
+
+## Download data locally
+
+```{r osf download data}
+local_data_pth <- file.path("data","Raw")
+
+create_local_structure(local_data_pth)
+
+data_files <- 
+  weissman_project %>% 
+  osf_ls_files() %>% 
+  filter(name == "Raw") %>% 
+  osf_ls_files() 
+
+data_files %>% 
+  group_by(name) %>% # for each experiment type
+  do(download_files(.,local_data_pth))
+
+# uncomment following line to remove the data   
+# remove_local_data(local_data_pth)
+```
+
+# Import data
+
+```{r}
+# Saving subfolder names
+subfolder <- list("primeprobe", "flanker", "stroop", "simon")
+
+# Reading in data
+processed <-
+  tibble(task = subfolder,
+         response = map(subfolder,
+                       ~ read_plus(subfolder_name = .x,
+                                   pattern = ".tsv$",
+                                   path = "data/Processed/",
+                                   sep = "\t")))
+```
+
+# Descriptive statistics of the sample size
+
+```{r}
+map(raw$response,
+    . %>% 
+      distinct(participant_id, .keep_all = T) %>% 
+      summarize(median_age = median(age, na.rm = T),
+                min_age = min(age, na.rm = T),
+                max_age = max(age, na.rm = T),
+                quart1_age = quantile(age, probs = 0.25, na.rm = T),
+                quart3_age = quantile(age, probs = 0.75, na.rm = T)))
+
+map(raw$response,
+    . %>% 
+      distinct(participant_id, .keep_all = T) %>% 
+      group_by(gender) %>% 
+      count() %>% 
+      ungroup() %>% 
+      filter(gender %in% c("female", "male")) %>% 
+      mutate(prop = n / sum(n) * 100))
+```
