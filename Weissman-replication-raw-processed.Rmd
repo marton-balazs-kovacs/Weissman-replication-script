@@ -140,7 +140,7 @@ participant_duplicate <-
          consentTime = as_datetime(consentTime / 1000, tz = "Europe/Prague")) %>% 
   filter(N != 1)
 
-participant_duplicate
+participant_duplicate %>% knitr::kable(caption = "Duplicate responses")
 ```
 
 # Exclude duplicate responses
@@ -328,6 +328,17 @@ raw <-
                                             !is.na(PrevCongruent),     # 1 exclusion criteria
                                             dropTrialRt       == 0L,   # 2 exclusion criteria
                                             isPrevDropTrialRt == 0L))) # 3 exclusion criteria
+```
+
+# Exclude participants younger than 18
+```{r}
+raw <-
+  raw %>% 
+  map(response,
+      . %>% 
+        mutate(ageDrop = case_when(age < 18 ~ 1L,
+                                   age >= 18 ~ 0L)) %>% 
+        filter(ageDrop != 1L))
 ```
 
 # Save task to individual dataframes
