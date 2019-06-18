@@ -23,8 +23,9 @@ source("utils.R")
 
 # Download data from OSF
 ## OSF auth (until project is public)
-osf_auth(token = read_lines("osf_token_write_martonbalazskovacs.txt"))
+
 ```{r osf authentication}
+osf_auth(token = read_lines(list.files("./", pattern = "osf_token_write_*")))
 ```
 
 ## Connect to data OSF folder
