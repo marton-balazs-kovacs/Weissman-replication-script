@@ -256,9 +256,10 @@ raw <-
                                  group_by(participant_id, isCongruent, isPrevCongruent) %>% 
                                  summarise(rtConditionalMean = mean(rt, na.rm = T),
                                            rtConditionalSd = sd(rt, na.rm = T))),
-         response = pmap(response, rtParticipantOutliers, rtTrialOutliers, 
-                         ~ left_join(.x, .y, by = "participant_id") %>% 
-                           left_join(., .z, by = c("participant_id", "isCongruent", "isPrevCongruent"))))
+         response = map2(response, rtParticipantOutliers, 
+                         ~ left_join(.x, .y, by = "participant_id")),
+         response = map2(response, rtTrialOutliers,
+                         ~ left_join(.x, .y, by = c("participant_id", "isCongruent", "isPrevCongruent"))))
 ```
 
 # Create variable that stores whether a participant or a trial should be dropped based on the rt criteria
@@ -279,6 +280,19 @@ raw <-
                                  dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
                                                                rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
                                                                TRUE ~ 0L))))
+```
+
+# Exclude participants younger than 18 or older than 99
+
+```{r}
+raw <-
+  raw %>% 
+  mutate(response = map(response,
+                        . %>% 
+                          mutate(ageDrop = case_when(age < 18 ~ 1L,
+                                   age > 99 ~ 1L,
+                                   TRUE ~ 0L)) %>% 
+                          filter(ageDrop != 1L)))
 ```
 
 # Participant level exclusion
@@ -308,7 +322,7 @@ raw <-
   raw %>% 
   mutate(responseRtAnalysis = map(response,
                                   ~ filter(.,
-                                           !is.na(PrevCongruent),     # 1 exclusion criteria
+                                           !is.na(isPrevCongruent),   # 1 exclusion criteria
                                            isCorrect         == 1L,   # 2 exclusion criteria
                                            isPrevCorrect     == 1L,   # 3 exclusion criteria
                                            dropTrialRt       == 0L,   # 4 exclusion criteria
@@ -326,20 +340,9 @@ raw <-
   raw %>% 
   mutate(responseAccAnalysis = map(response,
                                    ~ filter(.,
-                                            !is.na(PrevCongruent),     # 1 exclusion criteria
+                                            !is.na(isPrevCongruent),   # 1 exclusion criteria
                                             dropTrialRt       == 0L,   # 2 exclusion criteria
                                             isPrevDropTrialRt == 0L))) # 3 exclusion criteria
-```
-
-# Exclude participants younger than 18
-```{r}
-raw <-
-  raw %>% 
-  map(response,
-      . %>% 
-        mutate(ageDrop = case_when(age < 18 ~ 1L,
-                                   age >= 18 ~ 0L)) %>% 
-        filter(ageDrop != 1L))
 ```
 
 # Save task to individual dataframes
@@ -349,11 +352,13 @@ raw <-
 walk2(raw$responseRtAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = "data/Processed/"))
+                   folder_path = "data/Processed/",
+                   extra_name = "_RT"))
 
 # Saving data for the accuracy analysis
 walk2(raw$responseAccAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = "data/Processed/"))
+                   folder_path = "data/Processed/",
+                   extra_name = "_Acc"))
 ```

@@ -137,8 +137,8 @@ join_df <- function(df_nest, df_unnest, var_by = c("id", "task", "consentTime"))
 #' 
 #' source df was created using steps in the markdown document
 #' 
-write_tdf2 <- function(data_column, id_column, folder_path) {
-  write_tsv(data_column, path = paste0(folder_path, id_column, "/", id_column, "_data.tsv"))
+write_tdf2 <- function(data_column, id_column, folder_path, extra_name = NULL) {
+  write_tsv(data_column, path = paste0(folder_path, id_column, "/", id_column, extra_name, "_data.tsv"))
 }
 
 #' Function to not include a vector in another vector
