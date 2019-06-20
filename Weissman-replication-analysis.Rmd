@@ -36,14 +36,14 @@ weissman_project <- osf_retrieve_node(data_guid)
 ## Download data locally
 
 ```{r osf download data}
-local_data_pth <- file.path("data","Raw")
+local_data_pth <- file.path("data","Processed")
 
 create_local_structure(local_data_pth)
 
 data_files <- 
   weissman_project %>% 
   osf_ls_files() %>% 
-  filter(name == "Raw") %>% 
+  filter(name == "Processed") %>% 
   osf_ls_files() 
 
 data_files %>% 
@@ -73,21 +73,93 @@ processed <-
 # Descriptive statistics of the sample size
 
 ```{r}
-map(raw$response,
+# Age
+
+map(processed$response,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
       summarize(median_age = median(age, na.rm = T),
                 min_age = min(age, na.rm = T),
                 max_age = max(age, na.rm = T),
                 quart1_age = quantile(age, probs = 0.25, na.rm = T),
-                quart3_age = quantile(age, probs = 0.75, na.rm = T)))
+                quart3_age = quantile(age, probs = 0.75, na.rm = T)) %>% 
+      knitr::kable(caption = "Age demogrpahics"))
 
-map(raw$response,
+# Gender
+
+map(processed$response,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
       group_by(gender) %>% 
       count() %>% 
       ungroup() %>% 
       filter(gender %in% c("female", "male")) %>% 
-      mutate(prop = n / sum(n) * 100))
+      mutate(prop = n / sum(n) * 100) %>% 
+      knitr::kable(caption = "Gender demogrpahics"))
+
+# Language
+
+map(processed$response,
+    . %>% 
+      distinct(participant_id, .keep_all = T) %>% 
+      mutate(loc = case_when(loc == "HUN" ~ "Hungarian",
+                             loc == "CZ" ~ "Czech")) %>% 
+      group_by(loc) %>% 
+      count() %>% 
+      ungroup() %>% 
+      mutate(prop = n / sum(n) * 100) %>% 
+      knitr::kable(caption = "Language demogrpahics"))
+
+# Education demographics
+
+map(processed$response,
+    . %>% 
+      distinct(participant_id, .keep_all = T) %>% 
+      group_by(education) %>% 
+      count() %>% 
+      ungroup() %>% 
+      filter(education %ni% c("blank", "refused")) %>% 
+      mutate(prop = n / sum(n) * 100) %>% 
+      knitr::kable(caption = "Education demogrpahics"))
+
+# Number of participants left after exclusion
+
+map(processed$response,
+    . %>% 
+      distinct(participant_id) %>% 
+      count())
+
+# Number of responses after exclusion
+
+map(processed$response,
+    . %>% 
+      count())
 ```
+
+# Figures of CSE
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(cse_plot_data = map(response,
+    . %>% 
+      mutate(isPrevCongruent = case_when(isPrevCongruent ==  0L ~ "Incongruent",
+                                         isPrevCongruent ==  1L ~ "Congruent"),
+             isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
+                                     isCongruent ==  1L ~ "Congruent")) %>% 
+      group_by(isPrevCongruent, isCongruent) %>% 
+      summarise(N = n(),
+                mean_rt = mean(rt, na.rm = T),
+                sd_rt = sd(rt, na.rm = T),
+                se_rt = sd_rt / sqrt(N))),
+    cse_plot = map(cse_plot_data,
+        ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_rt, shape = isCongruent)) +
+          geom_line() +
+          geom_point() +
+          geom_errorbar(aes(ymin = mean_rt - se_rt, ymax = mean_rt + se_rt), width=.1) +
+          xlab("Congruency of the previous trial")+
+          ylab("Reaction time") +
+          guides(shape = guide_legend(title="Congruency of \n the current trial"))
+        ))
+```
+
