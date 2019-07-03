@@ -153,8 +153,8 @@ processed <-
                 sd_rt = sd(rt, na.rm = T),
                 se_rt = sd_rt / sqrt(N))),
     cse_plot = map(cse_plot_data,
-        ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_rt, shape = isCongruent)) +
-          geom_line() +
+        ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_rt, shape = isCongruent, group = isCongruent)) +
+          geom_path() +
           geom_point() +
           geom_errorbar(aes(ymin = mean_rt - se_rt, ymax = mean_rt + se_rt), width=.1) +
           xlab("Congruency of the previous trial")+

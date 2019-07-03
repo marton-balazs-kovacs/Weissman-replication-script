@@ -281,7 +281,8 @@ raw <-
                                  dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
                                                                rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
                                                                TRUE ~ 0L))))
-raw$response[[1]] %>% View()
+
+raw$response[[2]] %>% View()
 ```
 
 # Exclude participants younger than 18 or older than 99
