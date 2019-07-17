@@ -63,19 +63,47 @@ subfolder <- list("primeprobe", "flanker", "stroop", "simon")
 # Reading in data
 processed <-
   tibble(task = subfolder,
-         response = map(subfolder,
+         rt_data = map(subfolder,
                        ~ read_plus(subfolder_name = .x,
                                    pattern = ".tsv$",
                                    path = "data/Processed/",
-                                   sep = "\t")))
+                                   sep = "\t",
+                                   exclude = "_Acc_")),
+         acc_data = map(subfolder,
+                        ~ read_plus(subfolder_name = .x,
+                                    pattern = ".tsv$",
+                                    path = "data/Processed/",
+                                    sep = "\t",
+                                    exclude = "_RT_")))
 ```
 
 # Descriptive statistics of the sample size
 
 ```{r}
+# Number of participants left after exclusion
+## The number of participants is the same for the reaction time and accuracy analysis as well
+
+map(processed$rt_data,
+    . %>% 
+      distinct(participant_id) %>% 
+      count())
+
+# Number of responses after exclusion
+## For the reaction time analysis
+
+map(processed$rt_data,
+    . %>% 
+      count())
+
+## For the accuracy analysis
+
+map(processed$acc_data,
+    . %>% 
+      count())
+
 # Age
 
-map(processed$response,
+map(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
       summarize(median_age = median(age, na.rm = T),
@@ -87,7 +115,7 @@ map(processed$response,
 
 # Gender
 
-map(processed$response,
+map(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
       group_by(gender) %>% 
@@ -99,7 +127,7 @@ map(processed$response,
 
 # Language
 
-map(processed$response,
+map(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
       mutate(loc = case_when(loc == "HUN" ~ "Hungarian",
@@ -112,7 +140,7 @@ map(processed$response,
 
 # Education demographics
 
-map(processed$response,
+map(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
       group_by(education) %>% 
@@ -121,19 +149,6 @@ map(processed$response,
       filter(education %ni% c("blank", "refused")) %>% 
       mutate(prop = n / sum(n) * 100) %>% 
       knitr::kable(caption = "Education demogrpahics"))
-
-# Number of participants left after exclusion
-
-map(processed$response,
-    . %>% 
-      distinct(participant_id) %>% 
-      count())
-
-# Number of responses after exclusion
-
-map(processed$response,
-    . %>% 
-      count())
 ```
 
 # Figures of CSE
@@ -141,25 +156,49 @@ map(processed$response,
 ```{r}
 processed <-
   processed %>% 
-  mutate(cse_plot_data = map(response,
-    . %>% 
-      mutate(isPrevCongruent = case_when(isPrevCongruent ==  0L ~ "Incongruent",
-                                         isPrevCongruent ==  1L ~ "Congruent"),
-             isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
-                                     isCongruent ==  1L ~ "Congruent")) %>% 
-      group_by(isPrevCongruent, isCongruent) %>% 
-      summarise(N = n(),
-                mean_rt = mean(rt, na.rm = T),
-                sd_rt = sd(rt, na.rm = T),
-                se_rt = sd_rt / sqrt(N))),
-    cse_plot = map(cse_plot_data,
-        ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_rt, shape = isCongruent, group = isCongruent)) +
-          geom_path() +
-          geom_point() +
-          geom_errorbar(aes(ymin = mean_rt - se_rt, ymax = mean_rt + se_rt), width=.1) +
-          xlab("Congruency of the previous trial")+
-          ylab("Reaction time") +
-          guides(shape = guide_legend(title="Congruency of \n the current trial"))
-        ))
+  mutate(cse_plot_data = map(rt_data,
+                             . %>% 
+                               mutate(isPrevCongruent = case_when(isPrevCongruent ==  0L ~ "Incongruent",
+                                                                  isPrevCongruent ==  1L ~ "Congruent"),
+                                      isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
+                                                              isCongruent ==  1L ~ "Congruent")) %>% 
+                               group_by(isPrevCongruent, isCongruent) %>% 
+                               summarise(N = n(),
+                                         mean_rt = mean(rt, na.rm = T),
+                                         sd_rt = sd(rt, na.rm = T),
+                                         se_rt = sd_rt / sqrt(N))),
+         cse_plot = map(cse_plot_data,
+                        ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_rt, shape = isCongruent, group = isCongruent)) +
+                          geom_path() +
+                          geom_point() +
+                          geom_errorbar(aes(ymin = mean_rt - se_rt, ymax = mean_rt + se_rt), width=.1) +
+                          xlab("Congruency of the previous trial")+
+                          ylab("Reaction time") +
+                          guides(shape = guide_legend(title="Congruency of \n the current trial"))
+                        ))
 ```
 
+# Reaction tima analyis
+## Calculate mean reaction time for the analysis for each participant in each task
+
+```{r calculating mean dev}
+processed <-
+  processed %>% 
+  mutate(rt_data = map(rt_data,
+                       . %>% 
+                         group_by(participant_id, isCongruent, isPrevCongruent) %>% 
+                         summarise(rtConditionalMean = mean(rt, na.rm = T),
+                                   rtConditionalSd = sd(rt, na.rm = T))))
+```
+
+# Accuracy analysis
+## Calculate mean accuracy for the analysis for each participant in each task
+
+```{r calculating mean dev}
+processed <-
+  processed %>% 
+  mutate(acc_data = map(acc_data,
+                        . %>% 
+                          group_by(participant_id, isCongruent, isPrevCongruent) %>% 
+                          summarise(AccConditionalMean = mean(isCorrect, na.rm = T))))
+```
