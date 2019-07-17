@@ -170,7 +170,7 @@ raw$response[[1]] <-
   raw %>% 
   filter(task == "primeprobe") %>% 
   unnest(response) %>%
-  mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - probeOffset,
+  mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - probeOnset,
                         responseContent == "TIMEOUT" ~ NA_real_))
 
 ## Flanker
@@ -178,7 +178,7 @@ raw$response[[2]] <-
   raw %>% 
   filter(task == "flanker") %>% 
   unnest(response) %>%
-  mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOffset,
+  mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
                         responseContent == "TIMEOUT" ~ NA_real_))
 
 # Stroop
@@ -194,7 +194,7 @@ raw$response[[4]] <-
   raw %>%
   filter(task == "simon") %>% 
   unnest(response) %>%
-  mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOffset,
+  mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
                         responseContent == "TIMEOUT" ~ NA_real_))
 ```
 
@@ -214,19 +214,7 @@ raw <-
                                                            trialId > 24 & lag(isCorrect) == 0L ~ 0L))))
 ```
 
-# Calucalate grand mean and sd rt
-
-```{r calculate grand mean}
-raw <- 
-  raw %>% 
-  mutate(response = map(response,
-                        . %>% 
-                          ungroup() %>% 
-                          mutate(rtGrandMean = mean(rt, na.rm = T),
-                                 rtGrandSd = sd(rt, na.rm = T))))
-```
-
-# Exclude trials where all the trials are time out trials
+# Exclude participants where all the trials are time out trials
 ```{r}
 raw <-
   raw %>%
@@ -240,6 +228,18 @@ raw <-
                            filter(dropAllMissingRt == 0L))) # Dropping trials
 ```
 
+# Exclude each first test trial of every participant before calculating mean response times
+
+* 1: First trial for each participant
+
+```{r}
+raw <- 
+  raw %>% 
+  mutate(response = map(response,
+                        . %>% 
+                          filter(!is.na(isPrevCongruent)))) # 1 trial level exclusion criteria
+```
+
 # Calucalte the mean response time and SD for exclusion
 
 ```{r calculate mean response time}
@@ -249,11 +249,13 @@ raw <-
                                      . %>%
                                        group_by(participant_id) %>% 
                                        summarise(rtParticipantMean = mean(rt, na.rm = T),
-                                                 rtParticipantSd = sd(rt, na.rm = T))),
+                                                 rtParticipantSd = sd(rt, na.rm = T)) %>% 
+                                       ungroup() %>% 
+                                       mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
+                                              rtGrandSd = sd(rtParticipantMean, na.rm = T))),
          rtTrialOutliers = map(response,
                                . %>% 
                                  ungroup() %>% 
-                                 filter(!is.na(isPrevCongruent)) %>% 
                                  group_by(participant_id, isCongruent, isPrevCongruent) %>% 
                                  summarise(rtConditionalMean = mean(rt, na.rm = T),
                                            rtConditionalSd = sd(rt, na.rm = T))),
@@ -271,18 +273,14 @@ raw <-
   mutate(response = map(response,
                         . %>% 
                           group_by(participant_id) %>% 
-                          mutate(dropTrialRt = case_when(rtParticipantMean + 2.5 * rtParticipantSd < rtConditionalMean ~ 1L,
-                                                         rtParticipantMean - 2.5 * rtParticipantSd > rtConditionalMean ~ 1L,
-                                                         is.na(isPrevCongruent) ~ 1L,
+                          mutate(dropTrialRt = case_when(rtConditionalMean + 2.5 * rtConditionalSd < rt ~ 1L,
+                                                         rtConditionalMean - 2.5 * rtConditionalSd > rt ~ 1L,
                                                          TRUE ~ 0L),
-                                 isPrevDropTrialRt = case_when(trialId == 24 ~ NA_integer_,
-                                                               trialId > 24 & lag(dropTrialRt) == 1L ~ 1L,
+                                 isPrevDropTrialRt = case_when(trialId > 24 & lag(dropTrialRt) == 1L ~ 1L,
                                                                trialId > 24 & lag(dropTrialRt) == 0L ~ 0L),
                                  dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
                                                                rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
                                                                TRUE ~ 0L))))
-
-raw$response[[2]] %>% View()
 ```
 
 # Exclude participants younger than 18 or older than 99
@@ -314,7 +312,6 @@ raw <-
 
 # Trial level exclusion for rt analysis
 
-* 1: First trial for each participant
 * 2: Error trials
 * 3: Trials following error trials
 * 4: Outliers, trials 2.5 SDs away from the conditional mean of the participant
@@ -325,7 +322,6 @@ raw <-
   raw %>% 
   mutate(responseRtAnalysis = map(response,
                                   ~ filter(.,
-                                           !is.na(isPrevCongruent),   # 1 exclusion criteria
                                            isCorrect         == 1L,   # 2 exclusion criteria
                                            isPrevCorrect     == 1L,   # 3 exclusion criteria
                                            dropTrialRt       == 0L,   # 4 exclusion criteria
@@ -334,7 +330,6 @@ raw <-
 
 # Trial level exclusion for error analysis
 
-* 1: First trial for each participant
 * 2: Outliers, trials 2.5 SDs away from the conditional mean of the participant
 * 3: Trials following outlier trials
 
@@ -343,7 +338,6 @@ raw <-
   raw %>% 
   mutate(responseAccAnalysis = map(response,
                                    ~ filter(.,
-                                            !is.na(isPrevCongruent),   # 1 exclusion criteria
                                             dropTrialRt       == 0L,   # 2 exclusion criteria
                                             isPrevDropTrialRt == 0L))) # 3 exclusion criteria
 ```
