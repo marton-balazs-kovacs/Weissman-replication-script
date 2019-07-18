@@ -12,6 +12,8 @@ library(tidyverse)
 library(osfr)
 library(lme4)
 library(BayesFactor)
+library(DescTools)
+library(sjstats)
 ```
 
 # Load helper functions
@@ -178,8 +180,10 @@ processed <-
                         ))
 ```
 
-# Reaction tima analyis
+# Reaction time analyis
 ## Calculate mean reaction time for the analysis for each participant in each task
+
+### TODO: Clean this mess up
 
 ```{r calculating mean dev}
 processed <-
@@ -187,8 +191,64 @@ processed <-
   mutate(rt_data = map(rt_data,
                        . %>% 
                          group_by(participant_id, isCongruent, isPrevCongruent) %>% 
-                         summarise(rtConditionalMean = mean(rt, na.rm = T),
-                                   rtConditionalSd = sd(rt, na.rm = T))))
+                         summarise(rtConditionalMean = mean(rt, na.rm = T)) %>% 
+                         ungroup() %>% 
+                         mutate(condition = case_when(isPrevCongruent == 0L & isCongruent == 0L ~ "ii",
+                                                      isPrevCongruent == 0L & isCongruent == 1L ~ "ic",
+                                                      isPrevCongruent == 1L & isCongruent == 0L ~ "ci",
+                                                      isPrevCongruent == 1L & isCongruent == 1L ~ "cc",
+                                                      TRUE ~ NA_character_)) %>% 
+                         select(-isPrevCongruent, -isCongruent) %>% 
+                         spread(key = condition, value = rtConditionalMean) %>% 
+                         mutate(congruencyEffect = ((ci + ii) / 2) - ((cc + ic) / 2),
+                                cseEffect = (ci - cc) - (ii - ic))))
+```
+
+## Running confirmatory analysis
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(anova_rt = map(rt_data,
+                        ~ aov(rtConditionalMean ~ isCongruent *isPrevCongruent + Error(participant_id/(isCongruent*isPrevCongruent)), data = .x)),
+         anova_rt_eta = map(anova_rt,
+                            ~ eta_sq(.x, partial = TRUE) %>% 
+                              filter(stratum == "participant_id:isCongruent:isPrevCongruent") %>% 
+                              pull(partial.etasq)))
+```
+
+### Calculating Bayes factors
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(bf_rt = map(anova_rt,
+                     ~ Bf()))
+```
+
+## Correlation analysis
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(corr = map(rt_data,
+                    ~ cor.test(.x$congruencyEffect, .x$cseEffect, method = "spearman")))
+```
+
+## Interaction between tasks
+### Creating the datatable
+
+```{r}
+interaction_rt_data <- 
+  processed %>% 
+  mutate(interaction_data = map2(rt_data, task, ~ .x %>% mutate(task = .y))) %>% 
+  unnest(interaction_data)
+```
+
+### Running the analysis
+
+```{r}
+
 ```
 
 # Accuracy analysis
@@ -200,5 +260,23 @@ processed <-
   mutate(acc_data = map(acc_data,
                         . %>% 
                           group_by(participant_id, isCongruent, isPrevCongruent) %>% 
-                          summarise(AccConditionalMean = mean(isCorrect, na.rm = T))))
+                          summarise(AccConditionalMean = mean(isCorrect, na.rm = T)) %>% 
+                          ungroup() %>% 
+                          mutate(isCongruent = as_factor(isCongruent),
+                                 isPrevCongruent = as_factor(isPrevCongruent),
+                                 participant_id = as_factor(participant_id))))
 ```
+
+## Running confirmatory analysis
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(anova_acc = map(acc_data,
+                        ~ aov(AccConditionalMean ~ isCongruent *isPrevCongruent + Error(participant_id/(isCongruent*isPrevCongruent)), data = .x)),
+         anova_acc_eta = map(anova_acc,
+                            ~ eta_sq(.x, partial = TRUE) %>% 
+                              filter(stratum == "participant_id:isCongruent:isPrevCongruent") %>% 
+                              pull(partial.etasq)))
+```
+
