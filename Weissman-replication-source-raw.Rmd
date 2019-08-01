@@ -12,6 +12,7 @@ library(tidyverse)
 library(janitor)
 library(osfr)
 library(purrrlyr)
+library(lubridate)
 ```
 
 # Load helper functions
@@ -20,38 +21,15 @@ library(purrrlyr)
 source("utils.R")
 ```
 
-# Download data from OSF
-## OSF auth (until project is public)
+We will read the source data from a private repository because the datafiles contain personal data.
 
-```{r osf authentication}
-osf_auth(token = read_lines(list.files("./", pattern = "osf_token_write_*")))
-```
+# Remove local data
 
-## Connect to data OSF folder
-```{r osf connect to OSF folder}
-data_guid <- "9knds"
+Uncomment the following lines to remove the local Source data if needed.
 
-weissman_project <- osf_retrieve_node(data_guid)
-```
+```{r}
+#local_data_pth <- file.path("data","Source")
 
-## Download data locally
-
-```{r osf download data}
-local_data_pth <- file.path("data","Source")
-
-create_local_structure(local_data_pth)
-
-data_files <- 
-  weissman_project %>% 
-  osf_ls_files() %>% 
-  filter(name == "Source") %>% 
-  osf_ls_files() 
-
-data_files %>% 
-  group_by(name) %>% # for each experiment type
-  do(download_files(.,local_data_pth))
-
-# uncomment following line to remove the data   
 # remove_local_data(local_data_pth)
 ```
 
@@ -280,4 +258,4 @@ walk2(source$join, source$task,
                    folder_path = "data/Raw/"))
 ```
 
-Final tdfs were uploaded to OSF manually.
+Final tsv files were uploaded to OSF manually.
