@@ -442,8 +442,6 @@ Bf(sd = post_congruent$estimate / post_congruent$statistic,
    tail = 1)
 ```
 
-The Bayes factor shows
-
 ```{r post incongruent Bf follow up comparison}
 Bf(sd = post_incongruent$estimate / post_incongruent$statistic,
    obtained = post_incongruent$estimate,
