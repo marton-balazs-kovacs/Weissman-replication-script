@@ -273,11 +273,6 @@ processed <-
   processed %>% 
   mutate(anova_rt = map(rt_data,
                         ~ aov(rtConditionalMean ~ isCongruent * isPrevCongruent + Error(participant_id / (isCongruent * isPrevCongruent)), data = .x)))
-
-processed <-
-  processed %>% 
-  mutate(t_rt = map(rt_effect_data,
-                    ~ t.test(.x$congruencyEffect, mu = 0)))
 ```
 
 The interaction was only significant for the first task, the primeprobe task.
@@ -438,11 +433,11 @@ post_incongruent <-
 The prior H1 model is a half-normal distribution with a mode of 0 and an SD equal to half of the CSE estimate for that given task, i.e., the originally reported congruency effect divided by four.
 
 ```{r post congruent Bf follow up comparison}
-Bf(sd = ,
-   obtained = ,
-   dfdata = ,
+Bf(sd = post_congruent$estimate / post_congruent$statistic,
+   obtained = post_congruent$estimate,
+   dfdata = post_congruent$parameter,
    meanoftheory = 0,
-   sdtheory = ,
+   sdtheory = processed$anova_rt_bf_effect[[1]]$originalRawEffect[1] / 4,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -450,11 +445,11 @@ Bf(sd = ,
 The Bayes factor shows
 
 ```{r post incongruent Bf follow up comparison}
-Bf(sd = ,
-   obtained = ,
-   dfdata = ,
+Bf(sd = post_incongruent$estimate / post_incongruent$statistic,
+   obtained = post_incongruent$estimate,
+   dfdata = post_incongruent$parameter,
    meanoftheory = 0,
-   sdtheory = ,
+   sdtheory = processed$anova_rt_bf_effect[[1]]$originalRawEffect[1] / 4,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -497,10 +492,24 @@ kruskal.test(cseEffect ~ task, data = interaction_rt_data)
 A Dunn’s test is used for pairwise comparisons.
 
 ```{r}
+dunn_test <- DescTools::DunnTest(cseEffect ~ task, data = interaction_rt_data)
 
+dunn_test
 ```
 
 #### Bf analysis of pairwise comparisons
+##### Preprocessing data for the Bf analysis
+
+Creating a tidy datatable from the Dunn test output.
+
+```{r}
+dunn_test <-
+  dunn_test[[1]] %>% 
+  as_tibble(rownames = "comparison") %>% 
+  janitor::clean_names()
+```
+
+##### Running the analysis
 
 A half-normal distribution is used with a mode of 0 and SD equal to half of the greater congruency effect of the two in any given pair as reported by Weissman et al. (2014).
 
@@ -508,7 +517,7 @@ Tasks in a descending order based on their congruency effect according to the or
 Stroop > Primeprobe > Flanker > Simon
 
 ```{r}
-
+# TODO: Calculate Bf for Dunn test mean rank differences
 ```
 
 ## III. analysis: Testing whether the size of the CSE changes as a function of the magnitude of interference
