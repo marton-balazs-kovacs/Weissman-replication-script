@@ -28,6 +28,7 @@ source("utils.R")
 ## OSF auth (until project is public)
 osf_auth(token = read_lines("osf_token_write_martonbalazskovacs.txt"))
 ```{r osf authentication}
+osf_auth(token = read_lines(list.files(pattern ="osf_token_write_.*.txt")))
 ```
 
 ## Connect to data OSF folder
@@ -118,58 +119,60 @@ map(processed$acc_data,
 We calculated the following statistics based on the reaction time data file, but because it contains the same participants as the accuracy data file there should be no difference between the results.
 
 ```{r}
-map(processed$rt_data,
+map_df(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
+      group_by(task) %>% 
       summarize(median_age = median(age, na.rm = T),
                 min_age = min(age, na.rm = T),
                 max_age = max(age, na.rm = T),
                 quart1_age = quantile(age, probs = 0.25, na.rm = T),
-                quart3_age = quantile(age, probs = 0.75, na.rm = T)) %>% 
-      knitr::kable(caption = "Age demogrpahics"))
+                quart3_age = quantile(age, probs = 0.75, na.rm = T))) %>% 
+      
+      knitr::kable(caption = "Age demographics")
 ```
 
 ## Gender
 
 ```{r}
-map(processed$rt_data,
+map_df(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
-      group_by(gender) %>% 
+      group_by(task,gender) %>% 
       count() %>% 
       ungroup() %>% 
       filter(gender %in% c("female", "male")) %>% 
-      mutate(prop = n / sum(n) * 100) %>% 
-      knitr::kable(caption = "Gender demogrpahics"))
+      mutate(prop = n / sum(n) * 100)) %>% 
+      knitr::kable(caption = "Gender demographics")
 ```
 
 ## Language
 
 ```{r}
-map(processed$rt_data,
+map_df(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
       mutate(loc = case_when(loc == "HUN" ~ "Hungarian",
                              loc == "CZ" ~ "Czech")) %>% 
-      group_by(loc) %>% 
+      group_by(task,loc) %>% 
       count() %>% 
       ungroup() %>% 
-      mutate(prop = n / sum(n) * 100) %>% 
-      knitr::kable(caption = "Language demogrpahics"))
+      mutate(prop = n / sum(n) * 100)) %>% 
+      knitr::kable(caption = "Language demographics")
 ```
 
 ## Education demographics
 
 ```{r}
-map(processed$rt_data,
+map_df(processed$rt_data,
     . %>% 
       distinct(participant_id, .keep_all = T) %>% 
-      group_by(education) %>% 
+      group_by(task,education) %>% 
       count() %>% 
       ungroup() %>% 
       filter(education %ni% c("blank", "refused")) %>% 
-      mutate(prop = n / sum(n) * 100) %>% 
-      knitr::kable(caption = "Education demogrpahics"))
+      mutate(prop = n / sum(n) * 100)) %>% 
+      knitr::kable(caption = "Education demographics")
 ```
 
 # Figures of CSE
@@ -215,7 +218,7 @@ processed <-
                                             mean_acc = mean(isCorrect, na.rm = T),
                                             sd_acc = sd(isCorrect, na.rm = T),
                                             se_acc = sd_acc / sqrt(N))),
-         cse_plot_acc = map(cse_plot_data,
+         cse_plot_acc = map(cse_plot_acc_data,
                            ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_acc, shape = isCongruent, group = isCongruent)) +
                              geom_path() +
                              geom_point() +
