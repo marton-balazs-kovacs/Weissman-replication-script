@@ -26,7 +26,9 @@ source("utils.R")
 
 # Download data from OSF
 ## OSF auth (until project is public)
-osf_auth(token = read_lines("osf_token_write_martonbalazskovacs.txt"))
+
+Read/write token should be created on OSF and it should be named as "osf_token_write"
+
 ```{r osf authentication}
 osf_auth(token = read_lines(list.files(pattern ="osf_token_write_.*.txt")))
 ```
