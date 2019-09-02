@@ -7,11 +7,9 @@ output: html_document
 
 # Load packages
 
-```{r load packages}
-
+```{r load packages, warning = FALSE, message = FALSE}
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse,osfr,lme4,BayesFactor,DescTools,sjstats,car,broom)
-
 ```
 
 # Load helper functions
@@ -38,7 +36,7 @@ weissman_project <- osf_retrieve_node(data_guid)
 
 ## Download data locally
 
-```{r osf download data}
+```{r osf download data, message = FALSE, echo = T, results = "hide"}
 local_data_pth <- file.path("data","Processed")
 
 create_local_structure(local_data_pth)
@@ -59,7 +57,7 @@ data_files %>%
 
 # Import data
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 # Saving subfolder names
 subfolder <- list("primeprobe", "flanker", "stroop", "simon")
 
@@ -81,6 +79,14 @@ processed <-
 
 # Reading original study effect sizes
 original <- read_tsv("original_study_data.tsv")
+```
+
+# Set task names
+
+```{r}
+processed$rt_data <- set_names(processed$rt_data, processed$task)
+
+processed$acc_data <- set_names(processed$rt_data, processed$task)
 ```
 
 # Descriptive statistics of the sample size
@@ -198,6 +204,9 @@ processed <-
                              xlab("Congruency of the previous trial")+
                              ylab("Reaction time") +
                              guides(shape = guide_legend(title="Congruency of \n the current trial"))))
+
+# Print plot
+processed$cse_plot_rt
 ```
 
 ## For the accuracy data
@@ -224,6 +233,9 @@ processed <-
                              xlab("Congruency of the previous trial")+
                              ylab("Reaction time") +
                              guides(shape = guide_legend(title="Congruency of \n the current trial"))))
+
+# Print plot
+processed$cse_plot_acc
 ```
 
 # Reaction time analyis
@@ -232,7 +244,7 @@ processed <-
 
 We are calculating mean reaction time for the analysis for each participant in each condition for each task.
 
-```{r calculating mean dev}
+```{r calculating mean dev rt}
 processed <-
   processed %>% 
   mutate(rt_data = map(rt_data,
@@ -274,6 +286,11 @@ processed <-
   processed %>% 
   mutate(anova_rt = map(rt_data,
                         ~ aov(rtConditionalMean ~ isCongruent * isPrevCongruent + Error(participant_id / (isCongruent * isPrevCongruent)), data = .x)))
+
+# Print results with names
+processed$anova_rt %>% 
+  set_names(., processed$task) %>% 
+  map(., summary)
 ```
 
 The interaction was only significant for the first task, the primeprobe task.
@@ -285,6 +302,11 @@ processed <-
   processed %>% 
   mutate(anova_rt_eta = map(anova_rt,
                             ~ eta_sq(.x, partial = TRUE)))
+
+# Print results with names
+processed$anova_rt_eta %>% 
+  set_names(., processed$task) %>% 
+  map(., summary)
 ```
 
 ### Calculating Bayes factors
@@ -322,7 +344,6 @@ processed <-
 ```
 
 We are adding the calucalted F-values for each effect to the calculated mean effects.
-
 
 ```{r}
 processed <-
@@ -383,6 +404,11 @@ processed <-
                                       sdtheory = .x$originalRawEffect[1] / 2,
                                       dftheory = 10^10,
                                       tail = 1)))
+
+# Print results with names
+processed$bf_interaction_rt %>% 
+  set_names(., processed$task) %>% 
+  knitr::kable()
 ```
 
 ##### For the main congruency effect of the current trial
@@ -399,7 +425,12 @@ processed <-
                                      meanoftheory = 0,
                                      sdtheory = .x$originalRawEffect[1],
                                      dftheory = 10^10,
-                                     tail = 1))) 
+                                     tail = 1)))
+
+# Print results with names
+processed$bf_congruency_rt %>% 
+  set_names(., processed$task) %>% 
+  knitr::kable()
 ```
 
 ### Follow up simple effects analysis
@@ -419,6 +450,8 @@ If the Bayes factor is greater than the preset threshold of B = 3 for the intera
 post_congruent <- 
   t.test(primeprobe$ic, primeprobe$cc, paired = TRUE) %>% 
   broom::tidy()
+
+post_congruent %>% knitr::kable()
 ```
 
 Post-congruent incongruent (cI) and post-incongruent incongruent (iI) trials in another.
@@ -427,6 +460,8 @@ Post-congruent incongruent (cI) and post-incongruent incongruent (iI) trials in 
 post_incongruent <- 
   t.test(primeprobe$ci, primeprobe$ii, paired = TRUE) %>% 
   broom::tidy()
+
+post_incongruent %>% knitr::kable()
 ```
 
 #### Calculating the Bayes factor for the follow up analysis
@@ -529,6 +564,11 @@ processed <-
   mutate(corr = map(rt_effect_data,
                     ~ cor.test(.x$congruencyEffect, .x$cseEffect, method = "pearson") %>% 
                       broom::tidy()))
+
+# Print the results with names
+processed$corr %>% 
+  set_names(., processed$task) %>% 
+  knitr::kable()
 ```
 
 ### Calculating Bayes factors
@@ -580,6 +620,10 @@ processed <-
                           sdtheory = .x$originalEstimateFisherZ,
                           dftheory = 10^10,
                           tail = 1)))
+
+# Print the results with names
+processed$bf_corr %>% 
+  set_names(., processed$task)
 ```
 
 # Accuracy analysis
@@ -588,7 +632,7 @@ processed <-
 
 We are calculating the accuracy for the analysis for each participant in each condition for each task.
 
-```{r calculating mean dev}
+```{r calculating mean dev acc}
 processed <-
   processed %>% 
   mutate(acc_data = map(acc_data,
@@ -630,6 +674,11 @@ processed <-
   processed %>% 
   mutate(anova_acc = map(acc_data,
                         ~ aov(AccConditionalMean ~ isCongruent * isPrevCongruent + Error(participant_id / (isCongruent * isPrevCongruent)), data = .x)))
+
+# Print the results with names
+processed$anova_acc %>% 
+  set_names(., processed$task) %>% 
+  map(., summary)
 ```
 
 None of the interaction effects are significant, therefore we will not run any follow up analysis for the accuracy analysis.
@@ -642,6 +691,11 @@ processed <-
   mutate(anova_acc_eta = map(anova_acc,
                             ~ eta_sq(.x, partial = TRUE) %>% 
                               filter(stratum == "participant_id:isCongruent:isPrevCongruent")))
+
+# Print results with names
+processed$anova_acc_eta %>% 
+  set_names(., processed$task) %>% 
+  knitr::kable()
 ```
 
 ### Calculating Bayes factors
@@ -729,6 +783,10 @@ processed <-
                                       sdtheory = .x$originalRawEffect[1] / 2,
                                       dftheory = 10^10,
                                       tail = 1)))
+
+# Print results with names
+processed$bf_interaction_acc %>% 
+  set_names(., processed$task)
 ```
 
 ##### For the main congruency effect of the current trial
@@ -746,4 +804,8 @@ processed <-
                                      sdtheory = .x$originalRawEffect[1],
                                      dftheory = 10^10,
                                      tail = 1))) 
+
+# Print results with names
+processed$bf_congruency_acc %>% 
+  set_names(., processed$task)
 ```

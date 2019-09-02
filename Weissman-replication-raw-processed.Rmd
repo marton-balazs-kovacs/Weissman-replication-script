@@ -359,3 +359,5 @@ walk2(raw$responseAccAnalysis, raw$task,
                    folder_path = "data/Processed/",
                    extra_name = "_Acc"))
 ```
+
+Final tsv files were uploaded to OSF manually.
