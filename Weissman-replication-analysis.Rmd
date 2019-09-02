@@ -86,7 +86,7 @@ original <- read_tsv("original_study_data.tsv")
 ```{r}
 processed$rt_data <- set_names(processed$rt_data, processed$task)
 
-processed$acc_data <- set_names(processed$rt_data, processed$task)
+processed$acc_data <- set_names(processed$acc_data, processed$task)
 ```
 
 # Descriptive statistics of the sample size
@@ -231,7 +231,7 @@ processed <-
                              geom_point() +
                              geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width=.1) +
                              xlab("Congruency of the previous trial")+
-                             ylab("Reaction time") +
+                             ylab("Accuracy") +
                              guides(shape = guide_legend(title="Congruency of \n the current trial"))))
 
 # Print plot
