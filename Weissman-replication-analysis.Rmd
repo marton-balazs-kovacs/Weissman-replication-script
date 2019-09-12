@@ -28,7 +28,7 @@ osf_auth(token = read_lines(list.files(pattern ="osf_token_write_.*.txt")))
 ```
 
 ## Connect to data OSF folder
-```{r osf connect to OSF folder}
+```{r osf connect to OSF folder, message = FALSE}
 data_guid <- "9knds"
 
 weissman_project <- osf_retrieve_node(data_guid)
@@ -407,8 +407,76 @@ processed <-
 
 # Print results with names
 processed$bf_interaction_rt %>% 
-  set_names(., processed$task) %>% 
-  knitr::kable()
+  set_names(., processed$task)
+```
+
+###### Finding the robustness region for the interaction effect
+
+```{r}
+# Finding the lower boundary of the robustness region
+## Primeprobe
+primeprobe_rt <- processed$anova_rt_bf_effect[[1]]
+
+Bf(sd = primeprobe_rt$se[3],
+   obtained = primeprobe_rt$rawEffect[3],
+   dfdata = primeprobe_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.59,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+flanker_rt <- processed$anova_rt_bf_effect[[2]]
+
+Bf(sd = flanker_rt$se[3],
+   obtained = flanker_rt$rawEffect[3],
+   dfdata = flanker_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 14.4,
+   dftheory = 10^10,
+   tail = 1)
+
+## Stroop
+stroop_rt <- processed$anova_rt_bf_effect[[3]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Simon
+simon_rt <- processed$anova_rt_bf_effect[[4]]
+
+## The lower limit is 0, because the Bf is inconslusive
+
+# Finding the upper boundary of the robustness region
+## Primeprobe
+Bf(sd = primeprobe_rt$se[3],
+   obtained = primeprobe_rt$rawEffect[3],
+   dfdata = primeprobe_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 6424,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+
+### The upper boundary is infinite, because the Bf supports the null model
+
+## Stroop
+Bf(sd = stroop_rt$se[3],
+   obtained = stroop_rt$rawEffect[3],
+   dfdata = stroop_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 225,
+   dftheory = 10^10,
+   tail = 1)
+
+## Simon
+Bf(sd = simon_rt$se[3],
+   obtained = simon_rt$rawEffect[3],
+   dfdata = simon_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 123,
+   dftheory = 10^10,
+   tail = 1)
 ```
 
 ##### For the main congruency effect of the current trial
@@ -429,8 +497,85 @@ processed <-
 
 # Print results with names
 processed$bf_congruency_rt %>% 
-  set_names(., processed$task) %>% 
-  knitr::kable()
+  set_names(., processed$task)
+```
+
+###### Finding the robustness region for the interaction effect
+
+```{r}
+# Finding the lower boundary of the robustness region
+## Primeprobe
+Bf(sd = primeprobe_rt$se[1],
+   obtained = primeprobe_rt$rawEffect[1],
+   dfdata = primeprobe_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.73,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+Bf(sd = flanker_rt$se[1],
+   obtained = flanker_rt$rawEffect[1],
+   dfdata = flanker_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.99,
+   dftheory = 10^10,
+   tail = 1)
+
+## Stroop
+Bf(sd = stroop_rt$se[1],
+   obtained = stroop_rt$rawEffect[1],
+   dfdata = stroop_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 1.7,
+   dftheory = 10^10,
+   tail = 1)
+
+## Simon
+Bf(sd = simon_rt$se[1],
+   obtained = simon_rt$rawEffect[1],
+   dfdata = simon_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.735,
+   dftheory = 10^10,
+   tail = 1)
+
+# Finding the upper boundary of the robustness region
+## Primeprobe
+Bf(sd = primeprobe_rt$se[1],
+   obtained = primeprobe_rt$rawEffect[1],
+   dfdata = primeprobe_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 26515,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+Bf(sd = flanker_rt$se[1],
+   obtained = flanker_rt$rawEffect[1],
+   dfdata = flanker_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 17185,
+   dftheory = 10^10,
+   tail = 1)
+
+## Stroop
+Bf(sd = stroop_rt$se[1],
+   obtained = stroop_rt$rawEffect[1],
+   dfdata = stroop_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 47405,
+   dftheory = 10^10,
+   tail = 1)
+
+## Simon
+Bf(sd = simon_rt$se[1],
+   obtained = simon_rt$rawEffect[1],
+   dfdata = simon_rt$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 15002,
+   dftheory = 10^10,
+   tail = 1)
 ```
 
 ### Follow up simple effects analysis
@@ -444,46 +589,98 @@ primeprobe <- processed$rt_effect_data[[1]]
 
 #### Running the analysis
 
-If the Bayes factor is greater than the preset threshold of B = 3 for the interaction effect in a given task we run a simple effects analyses, contrasting post-congruent congruent (cC) and post-incongruent congruent (iC) trials.
+If the Bayes factor is greater than the preset threshold of B = 3 for the interaction effect in a given task we run a simple effects analyses, contrasting current-congruent congruent (cC) and current-incongruent congruent (iC) trials.
 
-```{r post congruent follow up comparison}
-post_congruent <- 
+```{r current congruent follow up comparison for rt}
+current_congruent <- 
   t.test(primeprobe$ic, primeprobe$cc, paired = TRUE) %>% 
   broom::tidy()
 
-post_congruent %>% knitr::kable()
+current_congruent %>% knitr::kable()
 ```
 
-Post-congruent incongruent (cI) and post-incongruent incongruent (iI) trials in another.
+current-congruent incongruent (cI) and current-incongruent incongruent (iI) trials in another.
 
-```{r post incongruent follow up comparison}
-post_incongruent <- 
+```{r current incongruent follow up comparison for rt}
+current_incongruent <- 
   t.test(primeprobe$ci, primeprobe$ii, paired = TRUE) %>% 
   broom::tidy()
 
-post_incongruent %>% knitr::kable()
+current_incongruent %>% knitr::kable()
 ```
 
 #### Calculating the Bayes factor for the follow up analysis
 
 The prior H1 model is a half-normal distribution with a mode of 0 and an SD equal to half of the CSE estimate for that given task, i.e., the originally reported congruency effect divided by four.
 
-```{r post congruent Bf follow up comparison}
-Bf(sd = post_congruent$estimate / post_congruent$statistic,
-   obtained = post_congruent$estimate,
-   dfdata = post_congruent$parameter,
+##### Current congruent follow up analysis
+
+```{r}
+Bf(sd = current_congruent$estimate / current_congruent$statistic,
+   obtained = current_congruent$estimate,
+   dfdata = current_congruent$parameter,
    meanoftheory = 0,
    sdtheory = processed$anova_rt_bf_effect[[1]]$originalRawEffect[1] / 4,
    dftheory = 10^10,
    tail = 1)
 ```
 
-```{r post incongruent Bf follow up comparison}
-Bf(sd = post_incongruent$estimate / post_incongruent$statistic,
-   obtained = post_incongruent$estimate,
-   dfdata = post_incongruent$parameter,
+###### Finding the robustness region for the current congruent follow up analysis
+
+```{r}
+# Finding the lower boundary of the robustness region
+Bf(sd = current_congruent$estimate / current_congruent$statistic,
+   obtained = current_congruent$estimate,
+   dfdata = current_congruent$parameter,
+   meanoftheory = 0,
+   sdtheory = 0.520,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+```{r}
+# Finding the upper boundary of the robustness region
+Bf(sd = current_congruent$estimate / current_congruent$statistic,
+   obtained = current_congruent$estimate,
+   dfdata = current_congruent$parameter,
+   meanoftheory = 0,
+   sdtheory = 2715,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+##### Current incongruent follow up analysis
+
+```{r}
+Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
+   obtained = current_incongruent$estimate,
+   dfdata = current_incongruent$parameter,
    meanoftheory = 0,
    sdtheory = processed$anova_rt_bf_effect[[1]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+###### Finding the robustness region for the current incongruent follow up analysis
+
+```{r}
+# Finding the lower boundary of the robustness region
+Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
+   obtained = current_incongruent$estimate,
+   dfdata = current_incongruent$parameter,
+   meanoftheory = 0,
+   sdtheory = 0.525,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+```{r}
+# Finding the upper boundary of the robustness region
+Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
+   obtained = current_incongruent$estimate,
+   dfdata = current_incongruent$parameter,
+   meanoftheory = 0,
+   sdtheory = 2976,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -531,9 +728,6 @@ dunn_test <- DescTools::DunnTest(cseEffect ~ task, data = interaction_rt_data)
 dunn_test
 ```
 
-#### Bf analysis of pairwise comparisons
-##### Preprocessing data for the Bf analysis
-
 Creating a tidy datatable from the Dunn test output.
 
 ```{r}
@@ -543,6 +737,53 @@ dunn_test <-
   janitor::clean_names()
 ```
 
+#### Bf analysis of pairwise comparisons
+##### Preprocessing data for the Bf analyses
+
+```{r}
+# Stroop and Primeprobe comparison
+stroop_primeprobe_comparison <- 
+  t.test(cseEffect ~ task,
+         data = filter(interaction_rt_data,
+                       task %in% c("stroop", "primeprobe"))) %>% 
+  broom::tidy()
+
+# Stroop and Simon comparison
+stroop_simon_comparison <- 
+  t.test(cseEffect ~ task,
+         data = filter(interaction_rt_data,
+                       task %in% c("stroop", "simon"))) %>% 
+  broom::tidy()
+
+# Stroop and Flanker comparison
+stroop_flanker_comparison <- 
+  t.test(cseEffect ~ task,
+         data = filter(interaction_rt_data,
+                       task %in% c("stroop", "flanker"))) %>% 
+  broom::tidy()
+
+# Primeprobe and Flanker comparison
+primeprobe_flanker_comparison <- 
+  t.test(cseEffect ~ task,
+         data = filter(interaction_rt_data,
+                       task %in% c("primeprobe", "flanker"))) %>% 
+  broom::tidy()
+
+# Primeprobe and Simon comparison
+primeprobe_simon_comparison <- 
+  t.test(cseEffect ~ task,
+         data = filter(interaction_rt_data,
+                       task %in% c("primeprobe", "simon"))) %>% 
+  broom::tidy()
+
+# Flanker and Simon comparison
+flanker_simon_comparison <- 
+  t.test(cseEffect ~ task,
+         data = filter(interaction_rt_data,
+                       task %in% c("flanker", "simon"))) %>% 
+  broom::tidy()
+```
+
 ##### Running the analysis
 
 A half-normal distribution is used with a mode of 0 and SD equal to half of the greater congruency effect of the two in any given pair as reported by Weissman et al. (2014).
@@ -550,8 +791,168 @@ A half-normal distribution is used with a mode of 0 and SD equal to half of the 
 Tasks in a descending order based on their congruency effect according to the original study:
 Stroop > Primeprobe > Flanker > Simon
 
+We are using a two-tailed test for the analysis.
+
+###### Stroop and Primeprobe comparison
+
 ```{r}
-# TODO: Calculate Bf for Dunn test mean rank differences
+# Bf Analysis
+Bf(obtained = stroop_primeprobe_comparison$estimate,
+   sd = stroop_primeprobe_comparison$estimate / stroop_primeprobe_comparison$statistic,
+   dfdata = stroop_primeprobe_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = original$congruency[1] / 2,
+   dftheory = 10^10,
+   tail = 2)
+
+# Finding the robustness region for the current incongruent follow up analysis
+## Finding the lower boundary of the robustness region
+Bf(obtained = stroop_primeprobe_comparison$estimate,
+   sd = stroop_primeprobe_comparison$estimate / stroop_primeprobe_comparison$statistic,
+   dfdata = stroop_primeprobe_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = 28.5,
+   dftheory = 10^10,
+   tail = 2)
+
+## Finding the upper boundary of the robustness region
+### The upper boundary is infinite, because the Bf supports the null model
+```
+
+###### Stroop and Simon comparison
+
+```{r}
+# Bf Analysis
+Bf(obtained = stroop_simon_comparison$estimate,
+   sd = stroop_simon_comparison$estimate / stroop_simon_comparison$statistic,
+   dfdata = stroop_simon_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = original$congruency[1] / 2,
+   dftheory = 10^10,
+   tail = 2)
+
+# Finding the robustness region for the current incongruent follow up analysis
+## Finding the lower boundary of the robustness region
+Bf(obtained = stroop_simon_comparison$estimate,
+   sd = stroop_simon_comparison$estimate / stroop_simon_comparison$statistic,
+   dfdata = stroop_simon_comparison$parameter,
+   meanoftheory = 0,
+     sdtheory = 37.5,
+   dftheory = 10^10,
+   tail = 2)
+
+## Finding the upper boundary of the robustness region
+## The upper boundary is infinite, because the Bf supports the null model
+```
+
+###### Stroop and Flanker comparison
+
+```{r}
+# Bf Analysis
+Bf(obtained = stroop_flanker_comparison$estimate,
+   sd = stroop_flanker_comparison$estimate / stroop_flanker_comparison$statistic,
+   dfdata = stroop_flanker_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = original$congruency[1] / 2,
+   dftheory = 10^10,
+   tail = 2)
+
+# Finding the robustness region for the current incongruent follow up analysis
+## Finding the lower boundary of the robustness region
+### The lower limit is 0, because the Bf is inconslusive
+
+## Finding the upper boundary of the robustness region
+Bf(obtained = stroop_flanker_comparison$estimate,
+   sd = stroop_flanker_comparison$estimate / stroop_flanker_comparison$statistic,
+   dfdata = stroop_flanker_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = 145,
+   dftheory = 10^10,
+   tail = 2)
+```
+
+###### Primeprobe and Flanker comparison
+
+```{r}
+# Bf Analysis
+Bf(obtained = primeprobe_flanker_comparison$estimate,
+   sd = primeprobe_flanker_comparison$estimate / primeprobe_flanker_comparison$statistic,
+   dfdata = primeprobe_flanker_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = original$congruency[4] / 2,
+   dftheory = 10^10,
+   tail = 2)
+
+# Finding the robustness region for the current incongruent follow up analysis
+## Finding the lower boundary of the robustness region
+Bf(obtained = primeprobe_flanker_comparison$estimate,
+   sd = primeprobe_flanker_comparison$estimate / primeprobe_flanker_comparison$statistic,
+   dfdata = primeprobe_flanker_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = 6.2,
+   dftheory = 10^10,
+   tail = 2)
+
+## Finding the upper boundary of the robustness region
+Bf(obtained = primeprobe_flanker_comparison$estimate,
+   sd = primeprobe_flanker_comparison$estimate / primeprobe_flanker_comparison$statistic,
+   dfdata = primeprobe_flanker_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = 102,
+   dftheory = 10^10,
+   tail = 2)
+```
+
+###### Primeprobe and Simon comparison
+
+```{r}
+# Bf Analysis
+Bf(obtained = primeprobe_simon_comparison$estimate,
+   sd = primeprobe_simon_comparison$estimate / primeprobe_simon_comparison$statistic,
+   dfdata = primeprobe_simon_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = original$congruency[4] / 2,
+   dftheory = 10^10,
+   tail = 2)
+
+# Finding the robustness region for the current incongruent follow up analysis
+## Finding the lower boundary of the robustness region
+Bf(obtained = primeprobe_simon_comparison$estimate,
+   sd = primeprobe_simon_comparison$estimate / primeprobe_simon_comparison$statistic,
+   dfdata = primeprobe_simon_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = 34,
+   dftheory = 10^10,
+   tail = 2)
+
+## Finding the upper boundary of the robustness region
+## The upper boundary is infinite, because the Bf supports the null model
+```
+
+###### Flanker and Simon comparison
+
+```{r}
+# Bf Analysis
+Bf(obtained = flanker_simon_comparison$estimate,
+   sd = flanker_simon_comparison$estimate / flanker_simon_comparison$statistic,
+   dfdata = flanker_simon_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = original$congruency[3] / 2,
+   dftheory = 10^10,
+   tail = 2)
+
+# Finding the robustness region for the current incongruent follow up analysis
+## Finding the lower boundary of the robustness region
+### The lower limit is 0, because the Bf is inconslusive
+
+## Finding the upper boundary of the robustness region
+Bf(obtained = flanker_simon_comparison$estimate,
+   sd = flanker_simon_comparison$estimate / flanker_simon_comparison$statistic,
+   dfdata = flanker_simon_comparison$parameter,
+   meanoftheory = 0,
+   sdtheory = 85,
+   dftheory = 10^10,
+   tail = 2)
 ```
 
 ## III. analysis: Testing whether the size of the CSE changes as a function of the magnitude of interference
@@ -624,6 +1025,76 @@ processed <-
 # Print the results with names
 processed$bf_corr %>% 
   set_names(., processed$task)
+```
+
+###### Finding the robustness region for the correlation analysis
+
+```{r}
+# Finding the lower boundary of the robustness region
+## Primeprobe
+primeprobe_corr <- processed$corr_bf_effect[[1]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Flanker
+flanker_corr <- processed$corr_bf_effect[[2]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Stroop
+stroop_corr <- processed$corr_bf_effect[[3]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Simon
+simon_corr <- processed$corr_bf_effect[[4]]
+
+Bf(sd = simon_corr$se,
+   obtained = simon_corr$estimateFisherZ,
+   dfdata = simon_corr$df,
+   meanoftheory = 0,
+   sdtheory = 0.053,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+```{r}
+# Finding the upper boundary of the robustness region
+## Primeprobe
+Bf(sd = primeprobe_corr$se,
+   obtained = primeprobe_corr$estimateFisherZ,
+   dfdata = primeprobe_corr$df,
+   meanoftheory = 0,
+   sdtheory = 1.4,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+Bf(sd = flanker_corr$se,
+   obtained = flanker_corr$estimateFisherZ,
+   dfdata = flanker_corr$df,
+   meanoftheory = 0,
+   sdtheory = 0.91,
+   dftheory = 10^10,
+   tail = 1)
+
+## Stroop
+Bf(sd = stroop_corr$se,
+   obtained = stroop_corr$estimateFisherZ,
+   dfdata = stroop_corr$df,
+   meanoftheory = 0,
+   sdtheory = 0.5,
+   dftheory = 10^10,
+   tail = 1)
+
+## Simon
+Bf(sd = simon_corr$se,
+   obtained = simon_corr$estimateFisherZ,
+   dfdata = simon_corr$df,
+   meanoftheory = 0,
+   sdtheory = 0.99,
+   dftheory = 10^10,
+   tail = 1)
 ```
 
 # Accuracy analysis
@@ -777,7 +1248,7 @@ processed <-
   processed %>% 
   mutate(bf_interaction_acc = map(anova_acc_bf_effect,
                                  ~ Bf(sd = .x$se[3],
-                                      obtained = .x$rawEffect[3],
+                                      obtained = -(.x$rawEffect[3]),
                                       dfdata = .x$nParticipant[1] - 1,
                                       meanoftheory = 0,
                                       sdtheory = .x$originalRawEffect[1] / 2,
@@ -789,6 +1260,76 @@ processed$bf_interaction_acc %>%
   set_names(., processed$task)
 ```
 
+###### Finding the robustness region for the interaction effect
+
+```{r}
+# Finding the lower boundary of the robustness region
+## Primeprobe
+primeprobe_acc <- processed$anova_acc_bf_effect[[1]]
+
+Bf(sd = primeprobe_acc$se[3],
+   obtained = -(primeprobe_acc$rawEffect[3]),
+   dfdata = primeprobe_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.0063,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+flanker_acc <- processed$anova_acc_bf_effect[[2]]
+
+Bf(sd = flanker_acc$se[3],
+   obtained = -(flanker_acc$rawEffect[3]),
+   dfdata = flanker_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.0033,
+   dftheory = 10^10,
+   tail = 1)
+
+## Stroop
+stroop_acc <- processed$anova_acc_bf_effect[[3]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Simon
+simon_acc <- processed$anova_acc_bf_effect[[4]]
+
+Bf(sd = simon_acc$se[3],
+   obtained = -(simon_acc$rawEffect[3]),
+   dfdata = simon_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.001395, 
+   dftheory = 10^10,
+   tail = 1)
+
+# Finding the upper boundary of the robustness region
+## Primeprobe
+
+### The upper boundary is infinite, because the Bf supports the null model
+
+## Flanker
+
+### The upper boundary is infinite, because the Bf supports the null model
+
+## Stroop
+Bf(sd = stroop_acc$se[3],
+   obtained = -(stroop_acc$rawEffect[3]),
+   dfdata = stroop_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.0265,
+   dftheory = 10^10,
+   tail = 1)
+
+## Simon
+Bf(sd = simon_acc$se[3],
+   obtained = -(simon_acc$rawEffect[3]),
+   dfdata = simon_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.0245,
+   dftheory = 10^10,
+   tail = 1)
+```
+
 ##### For the main congruency effect of the current trial
 
 To test the congruency main effect, the SD of the H1 model is set to the congruency effect reported by Weissman et al. (2014) for the given task. The other settings stay the same.
@@ -798,7 +1339,7 @@ processed <-
   processed %>% 
   mutate(bf_congruency_acc = map(anova_acc_bf_effect,
                                 ~ Bf(sd = .x$se[1],
-                                     obtained = .x$rawEffect[1],
+                                     obtained = -(.x$rawEffect[1]),
                                      dfdata = .x$nParticipant[1] - 1,
                                      meanoftheory = 0,
                                      sdtheory = .x$originalRawEffect[1],
@@ -808,4 +1349,177 @@ processed <-
 # Print results with names
 processed$bf_congruency_acc %>% 
   set_names(., processed$task)
+```
+
+###### Finding the robustness region for the main congruency effect
+
+```{r}
+# Finding the lower boundary of the robustness region
+## Primeprobe
+Bf(sd = primeprobe_acc$se[1],
+   obtained = -(primeprobe_acc$rawEffect[1]),
+   dfdata = primeprobe_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.00026,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Stroop
+Bf(sd = stroop_acc$se[1],
+   obtained = -(stroop_acc$rawEffect[1]),
+   dfdata = stroop_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.00026,
+   dftheory = 10^10,
+   tail = 1)
+
+## Simon
+Bf(sd = simon_acc$se[1],
+   obtained = -(simon_acc$rawEffect[1]),
+   dfdata = simon_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.00049,
+   dftheory = 10^10,
+   tail = 1)
+
+# Finding the upper boundary of the robustness region
+## Primeprobe
+Bf(sd = primeprobe_acc$se[1],
+   obtained = -(primeprobe_acc$rawEffect[1]),
+   dfdata = primeprobe_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 1.819,
+   dftheory = 10^10,
+   tail = 1)
+
+## Flanker
+Bf(sd = flanker_acc$se[1],
+   obtained = -(flanker_acc$rawEffect[1]),
+   dfdata = flanker_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.0103,
+   dftheory = 10^10,
+   tail = 1)
+
+## Stroop
+Bf(sd = stroop_acc$se[1],
+   obtained = -(stroop_acc$rawEffect[1]),
+   dfdata = stroop_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 2.335,
+   dftheory = 10^10,
+   tail = 1)
+
+## Simon
+Bf(sd = simon_acc$se[1],
+   obtained = -(simon_acc$rawEffect[1]),
+   dfdata = simon_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 5.505,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+### Follow up simple effects analysis
+#### Preprocessing data
+
+Saving the data of the task (primeprobe) with significant interaction between current trial congruency and previous trial congruency.
+
+```{r}
+simon <- processed$acc_effect_data[[4]]
+```
+
+#### Running the analysis
+
+If the Bayes factor is greater than the preset threshold of B = 3 for the interaction effect in a given task we run a simple effects analyses, contrasting current-congruent congruent (cC) and current-incongruent congruent (iC) trials.
+
+```{r current congruent follow up comparison for acc}
+current_congruent <- 
+  t.test(simon$cc, simon$ic, paired = TRUE) %>% 
+  broom::tidy()
+
+current_congruent %>% knitr::kable()
+```
+
+current-congruent incongruent (cI) and current-incongruent incongruent (iI) trials in another.
+
+```{r current incongruent follow up comparison for acc}
+current_incongruent <- 
+  t.test(simon$ci, simon$ii, paired = TRUE) %>% 
+  broom::tidy()
+
+current_incongruent %>% knitr::kable()
+```
+
+#### Calculating the Bayes factor for the follow up analysis
+
+The prior H1 model is a half-normal distribution with a mode of 0 and an SD equal to half of the CSE estimate for that given task, i.e., the originally reported congruency effect divided by four.
+
+#### Current congruent follow-up comparison
+
+```{r}
+Bf(sd = current_congruent$estimate / current_congruent$statistic,
+   obtained = current_congruent$estimate,
+   dfdata = current_congruent$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_acc_bf_effect[[4]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+##### Finding the robustness region for the current congruent follow up analysis
+
+```{r}
+# Finding the lower boundary of the robustness region
+Bf(sd = current_congruent$estimate / current_congruent$statistic,
+   obtained = current_congruent$estimate,
+   dfdata = current_congruent$parameter,
+   meanoftheory = 0,
+   sdtheory = 0.00083,
+   dftheory = 10^10,
+   tail = 1)
+
+# Finding the upper boundary of the robustness region
+Bf(sd = current_congruent$estimate / current_congruent$statistic,
+   obtained = current_congruent$estimate,
+   dfdata = current_congruent$parameter,
+   meanoftheory = 0,
+   sdtheory = 0.015,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+We found moderate evidence for the H1 (t = 2.39, bf = 6.12, RR[0.00083, 0.015]).
+
+#### Current icongruent follow-up comparison
+
+```{r}
+Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
+   obtained = -(current_incongruent$estimate),
+   dfdata = current_incongruent$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_acc_bf_effect[[4]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+##### Finding the robustness region for the current incongruent follow up analysis
+
+```{r}
+# Finding the lower boundary of the robustness region
+
+### The lower limit is 0, because the Bf is inconslusive
+
+# Finding the upper boundary of the robustness region
+Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
+   obtained = -(current_incongruent$estimate),
+   dfdata = current_incongruent$parameter,
+   meanoftheory = 0,
+   sdtheory = 0.0205,
+   dftheory = 10^10,
+   tail = 1)
 ```
