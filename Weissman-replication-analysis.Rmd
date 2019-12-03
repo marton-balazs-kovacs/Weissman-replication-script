@@ -41,17 +41,17 @@ local_data_pth <- file.path("data","Processed")
 
 create_local_structure(local_data_pth)
 
-data_files <- 
-  weissman_project %>% 
-  osf_ls_files() %>% 
-  filter(name == "Processed") %>% 
-  osf_ls_files() 
+data_files <-
+  weissman_project %>%
+  osf_ls_files() %>%
+  filter(name == "Processed") %>%
+  osf_ls_files()
 
-data_files %>% 
+data_files %>%
   group_by(name) %>% # for each experiment type
   do(download_files(.,local_data_pth))
 
-# uncomment following line to remove the data   
+# uncomment following line to remove the data
 # remove_local_data(local_data_pth)
 ```
 
@@ -421,7 +421,7 @@ Bf(sd = primeprobe_rt$se[3],
    obtained = primeprobe_rt$rawEffect[3],
    dfdata = primeprobe_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.59,
+   sdtheory = 0.60,
    dftheory = 10^10,
    tail = 1)
 
@@ -432,7 +432,7 @@ Bf(sd = flanker_rt$se[3],
    obtained = flanker_rt$rawEffect[3],
    dfdata = flanker_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 14.4,
+   sdtheory = 14.6,
    dftheory = 10^10,
    tail = 1)
 
@@ -452,7 +452,7 @@ Bf(sd = primeprobe_rt$se[3],
    obtained = primeprobe_rt$rawEffect[3],
    dfdata = primeprobe_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 6424,
+   sdtheory = 6423,
    dftheory = 10^10,
    tail = 1)
 
@@ -465,7 +465,7 @@ Bf(sd = stroop_rt$se[3],
    obtained = stroop_rt$rawEffect[3],
    dfdata = stroop_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 225,
+   sdtheory = 222,
    dftheory = 10^10,
    tail = 1)
 
@@ -474,7 +474,7 @@ Bf(sd = simon_rt$se[3],
    obtained = simon_rt$rawEffect[3],
    dfdata = simon_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 123,
+   sdtheory = 120,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -509,7 +509,7 @@ Bf(sd = primeprobe_rt$se[1],
    obtained = primeprobe_rt$rawEffect[1],
    dfdata = primeprobe_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.73,
+   sdtheory = 0.74,
    dftheory = 10^10,
    tail = 1)
 
@@ -518,7 +518,7 @@ Bf(sd = flanker_rt$se[1],
    obtained = flanker_rt$rawEffect[1],
    dfdata = flanker_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.99,
+   sdtheory = 1,
    dftheory = 10^10,
    tail = 1)
 
@@ -527,7 +527,7 @@ Bf(sd = stroop_rt$se[1],
    obtained = stroop_rt$rawEffect[1],
    dfdata = stroop_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 1.7,
+   sdtheory = 1.75,
    dftheory = 10^10,
    tail = 1)
 
@@ -536,7 +536,7 @@ Bf(sd = simon_rt$se[1],
    obtained = simon_rt$rawEffect[1],
    dfdata = simon_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.735,
+   sdtheory = 0.74,
    dftheory = 10^10,
    tail = 1)
 
@@ -546,7 +546,7 @@ Bf(sd = primeprobe_rt$se[1],
    obtained = primeprobe_rt$rawEffect[1],
    dfdata = primeprobe_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 26515,
+   sdtheory = 26512,
    dftheory = 10^10,
    tail = 1)
 
@@ -555,7 +555,7 @@ Bf(sd = flanker_rt$se[1],
    obtained = flanker_rt$rawEffect[1],
    dfdata = flanker_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 17185,
+   sdtheory = 17181,
    dftheory = 10^10,
    tail = 1)
 
@@ -564,7 +564,7 @@ Bf(sd = stroop_rt$se[1],
    obtained = stroop_rt$rawEffect[1],
    dfdata = stroop_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 47405,
+   sdtheory = 47403,
    dftheory = 10^10,
    tail = 1)
 
@@ -573,7 +573,7 @@ Bf(sd = simon_rt$se[1],
    obtained = simon_rt$rawEffect[1],
    dfdata = simon_rt$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 15002,
+   sdtheory = 15000,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -633,7 +633,7 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
    obtained = current_congruent$estimate,
    dfdata = current_congruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.520,
+   sdtheory = 0.525,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -644,7 +644,7 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
    obtained = current_congruent$estimate,
    dfdata = current_congruent$parameter,
    meanoftheory = 0,
-   sdtheory = 2715,
+   sdtheory = 2713,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -669,7 +669,7 @@ Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
    obtained = current_incongruent$estimate,
    dfdata = current_incongruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.525,
+   sdtheory = 0.53,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -680,7 +680,7 @@ Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
    obtained = current_incongruent$estimate,
    dfdata = current_incongruent$parameter,
    meanoftheory = 0,
-   sdtheory = 2976,
+   sdtheory = 2973,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -693,10 +693,8 @@ We are combining the effects (main congruency effect of current trial, main cong
 ```{r, warning = FALSE}
 interaction_rt_data <- 
   processed %>% 
-  mutate(interaction_data = map2(rt_effect_data, task,
-                                 ~ .x %>%
-                                   mutate(task = .y))) %>% 
-  unnest(interaction_data) %>% 
+  select(task, rt_effect_data) %>% 
+  unnest(rt_effect_data) %>% 
   mutate(task = as.factor(task))
 ```
 
@@ -811,7 +809,7 @@ Bf(obtained = stroop_primeprobe_comparison$estimate,
    sd = stroop_primeprobe_comparison$estimate / stroop_primeprobe_comparison$statistic,
    dfdata = stroop_primeprobe_comparison$parameter,
    meanoftheory = 0,
-   sdtheory = 28.5,
+   sdtheory = 28.8,
    dftheory = 10^10,
    tail = 2)
 
@@ -837,7 +835,7 @@ Bf(obtained = stroop_simon_comparison$estimate,
    sd = stroop_simon_comparison$estimate / stroop_simon_comparison$statistic,
    dfdata = stroop_simon_comparison$parameter,
    meanoftheory = 0,
-     sdtheory = 37.5,
+     sdtheory = 37.7,
    dftheory = 10^10,
    tail = 2)
 
@@ -866,7 +864,7 @@ Bf(obtained = stroop_flanker_comparison$estimate,
    sd = stroop_flanker_comparison$estimate / stroop_flanker_comparison$statistic,
    dfdata = stroop_flanker_comparison$parameter,
    meanoftheory = 0,
-   sdtheory = 145,
+   sdtheory = 140,
    dftheory = 10^10,
    tail = 2)
 ```
@@ -889,7 +887,7 @@ Bf(obtained = primeprobe_flanker_comparison$estimate,
    sd = primeprobe_flanker_comparison$estimate / primeprobe_flanker_comparison$statistic,
    dfdata = primeprobe_flanker_comparison$parameter,
    meanoftheory = 0,
-   sdtheory = 6.2,
+   sdtheory = 6.3,
    dftheory = 10^10,
    tail = 2)
 
@@ -898,7 +896,7 @@ Bf(obtained = primeprobe_flanker_comparison$estimate,
    sd = primeprobe_flanker_comparison$estimate / primeprobe_flanker_comparison$statistic,
    dfdata = primeprobe_flanker_comparison$parameter,
    meanoftheory = 0,
-   sdtheory = 102,
+   sdtheory = 101,
    dftheory = 10^10,
    tail = 2)
 ```
@@ -921,7 +919,7 @@ Bf(obtained = primeprobe_simon_comparison$estimate,
    sd = primeprobe_simon_comparison$estimate / primeprobe_simon_comparison$statistic,
    dfdata = primeprobe_simon_comparison$parameter,
    meanoftheory = 0,
-   sdtheory = 34,
+   sdtheory = 35,
    dftheory = 10^10,
    tail = 2)
 
@@ -950,7 +948,7 @@ Bf(obtained = flanker_simon_comparison$estimate,
    sd = flanker_simon_comparison$estimate / flanker_simon_comparison$statistic,
    dfdata = flanker_simon_comparison$parameter,
    meanoftheory = 0,
-   sdtheory = 85,
+   sdtheory = 83,
    dftheory = 10^10,
    tail = 2)
 ```
@@ -1053,7 +1051,7 @@ Bf(sd = simon_corr$se,
    obtained = simon_corr$estimateFisherZ,
    dfdata = simon_corr$df,
    meanoftheory = 0,
-   sdtheory = 0.053,
+   sdtheory = 0.054,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1065,7 +1063,7 @@ Bf(sd = primeprobe_corr$se,
    obtained = primeprobe_corr$estimateFisherZ,
    dfdata = primeprobe_corr$df,
    meanoftheory = 0,
-   sdtheory = 1.4,
+   sdtheory = 1.3,
    dftheory = 10^10,
    tail = 1)
 
@@ -1074,7 +1072,7 @@ Bf(sd = flanker_corr$se,
    obtained = flanker_corr$estimateFisherZ,
    dfdata = flanker_corr$df,
    meanoftheory = 0,
-   sdtheory = 0.91,
+   sdtheory = 0.89,
    dftheory = 10^10,
    tail = 1)
 
@@ -1083,7 +1081,7 @@ Bf(sd = stroop_corr$se,
    obtained = stroop_corr$estimateFisherZ,
    dfdata = stroop_corr$df,
    meanoftheory = 0,
-   sdtheory = 0.5,
+   sdtheory = 0.45,
    dftheory = 10^10,
    tail = 1)
 
@@ -1271,7 +1269,7 @@ Bf(sd = primeprobe_acc$se[3],
    obtained = -(primeprobe_acc$rawEffect[3]),
    dfdata = primeprobe_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0063,
+   sdtheory = 0.0064,
    dftheory = 10^10,
    tail = 1)
 
@@ -1282,7 +1280,7 @@ Bf(sd = flanker_acc$se[3],
    obtained = -(flanker_acc$rawEffect[3]),
    dfdata = flanker_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0033,
+   sdtheory = 0.0034,
    dftheory = 10^10,
    tail = 1)
 
@@ -1325,7 +1323,7 @@ Bf(sd = simon_acc$se[3],
    obtained = -(simon_acc$rawEffect[3]),
    dfdata = simon_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0245,
+   sdtheory = 0.0235,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1360,7 +1358,7 @@ Bf(sd = primeprobe_acc$se[1],
    obtained = -(primeprobe_acc$rawEffect[1]),
    dfdata = primeprobe_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.00026,
+   sdtheory = 0.00027,
    dftheory = 10^10,
    tail = 1)
 
@@ -1373,7 +1371,7 @@ Bf(sd = stroop_acc$se[1],
    obtained = -(stroop_acc$rawEffect[1]),
    dfdata = stroop_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.00026,
+   sdtheory = 0.00027,
    dftheory = 10^10,
    tail = 1)
 
@@ -1382,7 +1380,7 @@ Bf(sd = simon_acc$se[1],
    obtained = -(simon_acc$rawEffect[1]),
    dfdata = simon_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.00049,
+   sdtheory = 0.0005,
    dftheory = 10^10,
    tail = 1)
 
@@ -1392,7 +1390,7 @@ Bf(sd = primeprobe_acc$se[1],
    obtained = -(primeprobe_acc$rawEffect[1]),
    dfdata = primeprobe_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 1.819,
+   sdtheory = 1.816,
    dftheory = 10^10,
    tail = 1)
 
@@ -1401,7 +1399,7 @@ Bf(sd = flanker_acc$se[1],
    obtained = -(flanker_acc$rawEffect[1]),
    dfdata = flanker_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0103,
+   sdtheory = 0.0101,
    dftheory = 10^10,
    tail = 1)
 
@@ -1410,7 +1408,7 @@ Bf(sd = stroop_acc$se[1],
    obtained = -(stroop_acc$rawEffect[1]),
    dfdata = stroop_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 2.335,
+   sdtheory = 2.334,
    dftheory = 10^10,
    tail = 1)
 
@@ -1419,7 +1417,7 @@ Bf(sd = simon_acc$se[1],
    obtained = -(simon_acc$rawEffect[1]),
    dfdata = simon_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 5.505,
+   sdtheory = 5.502,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1519,7 +1517,7 @@ Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
    obtained = -(current_incongruent$estimate),
    dfdata = current_incongruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.0205,
+   sdtheory = 0.0201,
    dftheory = 10^10,
    tail = 1)
 ```
