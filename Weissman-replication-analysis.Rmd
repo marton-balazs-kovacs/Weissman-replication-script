@@ -9,7 +9,7 @@ output: html_document
 
 ```{r load packages, warning = FALSE, message = FALSE}
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse,osfr,lme4,BayesFactor,DescTools,sjstats,car,broom)
+pacman::p_load(tidyverse, osfr, lme4, BayesFactor, DescTools, sjstats, car, broom, papaja, cowplot)
 ```
 
 # Load helper functions
@@ -24,35 +24,35 @@ source("utils.R")
 Read/write token should be created on OSF and it should be named as "osf_token_write"
 
 ```{r osf authentication}
-osf_auth(token = read_lines(list.files(pattern ="osf_token_write_.*.txt")))
+# osf_auth(token = read_lines(list.files(pattern ="osf_token_write_.*.txt")))
 ```
 
 ## Connect to data OSF folder
 ```{r osf connect to OSF folder, message = FALSE}
-data_guid <- "9knds"
-
-weissman_project <- osf_retrieve_node(data_guid)
+# data_guid <- "9knds"
+# 
+# weissman_project <- osf_retrieve_node(data_guid)
 ```
 
 ## Download data locally
 
 ```{r osf download data, message = FALSE, echo = T, results = "hide"}
-local_data_pth <- file.path("data","Processed")
-
-create_local_structure(local_data_pth)
-
-data_files <-
-  weissman_project %>%
-  osf_ls_files() %>%
-  filter(name == "Processed") %>%
-  osf_ls_files()
-
-data_files %>%
-  group_by(name) %>% # for each experiment type
-  do(download_files(.,local_data_pth))
-
-# uncomment following line to remove the data
-# remove_local_data(local_data_pth)
+# local_data_pth <- file.path("data","Processed")
+# 
+# create_local_structure(local_data_pth)
+# 
+# data_files <-
+#   weissman_project %>%
+#   osf_ls_files() %>%
+#   filter(name == "Processed") %>%
+#   osf_ls_files()
+# 
+# data_files %>%
+#   group_by(name) %>% # for each experiment type
+#   do(download_files(.,local_data_pth))
+# 
+# # uncomment following line to remove the data
+# # remove_local_data(local_data_pth)
 ```
 
 # Import data
@@ -75,7 +75,7 @@ processed <-
                                     pattern = ".tsv$",
                                     path = "data/Processed/",
                                     sep = "\t",
-                                    exclude = "_RT_")))
+                                    exclude = "_Rt_")))
 
 # Reading original study effect sizes
 original <- read_tsv("original_study_data.tsv")
@@ -191,19 +191,23 @@ processed <-
                                                                      isPrevCongruent ==  1L ~ "Congruent"),
                                          isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
                                                                  isCongruent ==  1L ~ "Congruent")) %>%
+                                  group_by(participant_id, isPrevCongruent, isCongruent) %>% 
+                                  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
                                   group_by(isPrevCongruent, isCongruent) %>% 
                                   summarise(N = n(),
-                                            mean_rt = mean(rt, na.rm = T),
-                                            sd_rt = sd(rt, na.rm = T),
+                                            mean_rt = mean(participant_mean_rt, na.rm = T),
+                                            sd_rt = sd(participant_mean_rt, na.rm = T),
                                             se_rt = sd_rt / sqrt(N))),
          cse_plot_rt = map(cse_plot_rt_data,
                            ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_rt, shape = isCongruent, group = isCongruent)) +
                              geom_path() +
-                             geom_point() +
+                             geom_point(size = 2) +
                              geom_errorbar(aes(ymin = mean_rt - se_rt, ymax = mean_rt + se_rt), width=.1) +
+                             scale_shape_manual(values=c(4, 16)) + 
                              xlab("Congruency of the previous trial")+
                              ylab("Reaction time") +
-                             guides(shape = guide_legend(title="Congruency of \n the current trial"))))
+                             guides(shape = guide_legend(title="Congruency of \n the current trial")) +
+                             papaja::theme_apa()))
 
 # Print plot
 processed$cse_plot_rt
@@ -220,19 +224,23 @@ processed <-
                                                                      isPrevCongruent ==  1L ~ "Congruent"),
                                          isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
                                                                  isCongruent ==  1L ~ "Congruent")) %>%
+                                  group_by(participant_id, isPrevCongruent, isCongruent) %>% 
+                                  summarise(participant_mean_acc = mean(isCorrect, na.rm = T)) %>% 
                                   group_by(isPrevCongruent, isCongruent) %>% 
                                   summarise(N = n(),
-                                            mean_acc = mean(isCorrect, na.rm = T),
-                                            sd_acc = sd(isCorrect, na.rm = T),
+                                            mean_acc = mean(participant_mean_acc, na.rm = T),
+                                            sd_acc = sd(participant_mean_acc, na.rm = T),
                                             se_acc = sd_acc / sqrt(N))),
          cse_plot_acc = map(cse_plot_acc_data,
                            ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_acc, shape = isCongruent, group = isCongruent)) +
                              geom_path() +
-                             geom_point() +
+                             geom_point(size = 2) +
                              geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width=.1) +
+                             scale_shape_manual(values=c(4, 16)) + 
                              xlab("Congruency of the previous trial")+
                              ylab("Accuracy") +
-                             guides(shape = guide_legend(title="Congruency of \n the current trial"))))
+                             guides(shape = guide_legend(title="Congruency of \n the current trial")) +
+                             papaja::theme_apa()))
 
 # Print plot
 processed$cse_plot_acc

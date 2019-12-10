@@ -28,7 +28,7 @@ We will read the source data from a private repository because the datafiles con
 Uncomment the following lines to remove the local Source data if needed.
 
 ```{r}
-#local_data_pth <- file.path("data","Source")
+# local_data_pth <- file.path("data","Source")
 
 # remove_local_data(local_data_pth)
 ```
