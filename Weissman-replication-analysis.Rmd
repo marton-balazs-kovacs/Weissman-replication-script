@@ -198,19 +198,33 @@ processed <-
                                             mean_rt = mean(participant_mean_rt, na.rm = T),
                                             sd_rt = sd(participant_mean_rt, na.rm = T),
                                             se_rt = sd_rt / sqrt(N))),
-         cse_plot_rt = map(cse_plot_rt_data,
+         cse_plot_rt = map2(cse_plot_rt_data, task, 
                            ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_rt, shape = isCongruent, group = isCongruent)) +
                              geom_path() +
                              geom_point(size = 2) +
                              geom_errorbar(aes(ymin = mean_rt - se_rt, ymax = mean_rt + se_rt), width=.1) +
-                             scale_shape_manual(values=c(4, 16)) + 
+                             scale_shape_manual(values=c(4, 16)) +
+                             scale_y_continuous(limits = c(550, 1000)) +
+                             scale_x_discrete(expand=c(1, 0)) +
+                             ggtitle(stringr::str_to_title(.y)) +
                              xlab("Congruency of the previous trial")+
                              ylab("Reaction time") +
                              guides(shape = guide_legend(title="Congruency of \n the current trial")) +
-                             papaja::theme_apa()))
+                             papaja::theme_apa() +
+                             theme(legend.position = c(0.85, 0.5),
+                                   axis.line = element_line(color = "black"))))
+```
 
-# Print plot
-processed$cse_plot_rt
+## Creating figure for the paper
+
+```{r}
+cowplot::plot_grid(plotlist = processed$cse_plot_rt)
+```
+
+## Saving the figure
+
+```{r}
+ggsave("figures/weissman_replication_rt_cse.png", width = 14.4, height = 8, plot = last_plot())
 ```
 
 ## For the accuracy data
@@ -231,19 +245,33 @@ processed <-
                                             mean_acc = mean(participant_mean_acc, na.rm = T),
                                             sd_acc = sd(participant_mean_acc, na.rm = T),
                                             se_acc = sd_acc / sqrt(N))),
-         cse_plot_acc = map(cse_plot_acc_data,
+         cse_plot_acc = map2(cse_plot_acc_data, task,
                            ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_acc, shape = isCongruent, group = isCongruent)) +
                              geom_path() +
                              geom_point(size = 2) +
                              geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width=.1) +
                              scale_shape_manual(values=c(4, 16)) + 
+                             scale_y_continuous(limits = c(0.93, 1)) +
+                             scale_x_discrete(expand=c(1, 0)) +
+                             ggtitle(stringr::str_to_title(.y)) +
                              xlab("Congruency of the previous trial")+
                              ylab("Accuracy") +
                              guides(shape = guide_legend(title="Congruency of \n the current trial")) +
-                             papaja::theme_apa()))
+                             papaja::theme_apa() +
+                             theme(legend.position = c(0.85, 0.5),
+                                   axis.line = element_line(color = "black"))))
+```
 
-# Print plot
-processed$cse_plot_acc
+## Creating figure for the paper
+
+```{r}
+cowplot::plot_grid(plotlist = processed$cse_plot_acc)
+```
+
+## Saving the figure
+
+```{r}
+ggsave("figures/weissman_replication_acc_cse.png", width = 14.4, height = 8, plot = last_plot())
 ```
 
 # Reaction time analyis
@@ -1267,30 +1295,18 @@ processed$bf_interaction_acc %>%
 ```
 
 ###### Finding the robustness region for the interaction effect
-
+## ITT
 ```{r}
 # Finding the lower boundary of the robustness region
 ## Primeprobe
 primeprobe_acc <- processed$anova_acc_bf_effect[[1]]
 
-Bf(sd = primeprobe_acc$se[3],
-   obtained = -(primeprobe_acc$rawEffect[3]),
-   dfdata = primeprobe_acc$nParticipant[1] - 1,
-   meanoftheory = 0,
-   sdtheory = 0.0064,
-   dftheory = 10^10,
-   tail = 1)
+### The lower limit is 0, because the Bf is inconslusive
 
 ## Flanker
 flanker_acc <- processed$anova_acc_bf_effect[[2]]
 
-Bf(sd = flanker_acc$se[3],
-   obtained = -(flanker_acc$rawEffect[3]),
-   dfdata = flanker_acc$nParticipant[1] - 1,
-   meanoftheory = 0,
-   sdtheory = 0.0034,
-   dftheory = 10^10,
-   tail = 1)
+### The lower limit is 0, because the Bf is inconslusive
 
 ## Stroop
 stroop_acc <- processed$anova_acc_bf_effect[[3]]
@@ -1304,25 +1320,36 @@ Bf(sd = simon_acc$se[3],
    obtained = -(simon_acc$rawEffect[3]),
    dfdata = simon_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.001395, 
+   sdtheory = 0.0021, 
    dftheory = 10^10,
    tail = 1)
 
 # Finding the upper boundary of the robustness region
 ## Primeprobe
 
-### The upper boundary is infinite, because the Bf supports the null model
+Bf(sd = primeprobe_acc$se[3],
+   obtained = -(primeprobe_acc$rawEffect[3]),
+   dfdata = primeprobe_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.0113,
+   dftheory = 10^10,
+   tail = 1)
 
 ## Flanker
-
-### The upper boundary is infinite, because the Bf supports the null model
+Bf(sd = flanker_acc$se[3],
+   obtained = -(flanker_acc$rawEffect[3]),
+   dfdata = flanker_acc$nParticipant[1] - 1,
+   meanoftheory = 0,
+   sdtheory = 0.0062,
+   dftheory = 10^10,
+   tail = 1)
 
 ## Stroop
 Bf(sd = stroop_acc$se[3],
    obtained = -(stroop_acc$rawEffect[3]),
    dfdata = stroop_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0265,
+   sdtheory = 0.063,
    dftheory = 10^10,
    tail = 1)
 
@@ -1331,7 +1358,7 @@ Bf(sd = simon_acc$se[3],
    obtained = -(simon_acc$rawEffect[3]),
    dfdata = simon_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0235,
+   sdtheory = 0.085,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1366,7 +1393,7 @@ Bf(sd = primeprobe_acc$se[1],
    obtained = -(primeprobe_acc$rawEffect[1]),
    dfdata = primeprobe_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.00027,
+   sdtheory = 0.00049,
    dftheory = 10^10,
    tail = 1)
 
@@ -1379,7 +1406,7 @@ Bf(sd = stroop_acc$se[1],
    obtained = -(stroop_acc$rawEffect[1]),
    dfdata = stroop_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.00027,
+   sdtheory = 0.00049,
    dftheory = 10^10,
    tail = 1)
 
@@ -1388,7 +1415,7 @@ Bf(sd = simon_acc$se[1],
    obtained = -(simon_acc$rawEffect[1]),
    dfdata = simon_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0005,
+   sdtheory = 0.00082,
    dftheory = 10^10,
    tail = 1)
 
@@ -1398,7 +1425,7 @@ Bf(sd = primeprobe_acc$se[1],
    obtained = -(primeprobe_acc$rawEffect[1]),
    dfdata = primeprobe_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 1.816,
+   sdtheory = 3.32,
    dftheory = 10^10,
    tail = 1)
 
@@ -1407,7 +1434,7 @@ Bf(sd = flanker_acc$se[1],
    obtained = -(flanker_acc$rawEffect[1]),
    dfdata = flanker_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 0.0101,
+   sdtheory = 0.0152,
    dftheory = 10^10,
    tail = 1)
 
@@ -1416,7 +1443,7 @@ Bf(sd = stroop_acc$se[1],
    obtained = -(stroop_acc$rawEffect[1]),
    dfdata = stroop_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 2.334,
+   sdtheory = 4.449,
    dftheory = 10^10,
    tail = 1)
 
@@ -1425,7 +1452,7 @@ Bf(sd = simon_acc$se[1],
    obtained = -(simon_acc$rawEffect[1]),
    dfdata = simon_acc$nParticipant[1] - 1,
    meanoftheory = 0,
-   sdtheory = 5.502,
+   sdtheory = 10.04,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1485,7 +1512,7 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
    obtained = current_congruent$estimate,
    dfdata = current_congruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.00083,
+   sdtheory = 0.00145,
    dftheory = 10^10,
    tail = 1)
 
@@ -1494,7 +1521,7 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
    obtained = current_congruent$estimate,
    dfdata = current_congruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.015,
+   sdtheory = 0.026,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1525,7 +1552,7 @@ Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
    obtained = -(current_incongruent$estimate),
    dfdata = current_incongruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.0201,
+   sdtheory = 0.062,
    dftheory = 10^10,
    tail = 1)
 ```
