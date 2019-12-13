@@ -623,6 +623,13 @@ Saving the data of the task (primeprobe) with significant interaction between cu
 primeprobe <- processed$rt_effect_data[[1]]
 ```
 
+#### Checking the number of responses
+
+```{r}
+primeprobe %>% 
+  count()
+```
+
 #### Running the analysis
 
 If the Bayes factor is greater than the preset threshold of B = 3 for the interaction effect in a given task we run a simple effects analyses, contrasting current-congruent congruent (cC) and current-incongruent congruent (iC) trials.
