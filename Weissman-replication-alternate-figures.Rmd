@@ -1,0 +1,151 @@
+---
+title: "Weissman-replication-alternate-figures"
+author: "Matt Jaquiery"
+date: "14/12/2019"
+output: html_document
+---
+
+```{r load packages, warning = FALSE, message = FALSE}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, osfr, lme4, BayesFactor, DescTools, sjstats, car, broom, papaja, cowplot)
+```
+
+# Load helper functions
+
+```{r load helper functions}
+source("utils.R")
+```
+
+# Import data
+
+Ensure you have the data downloaded by running the data analysis script or manually downloading from the [OSF repository](https://osf.io/9knds/).
+
+```{r, message = FALSE, warning = FALSE}
+# Saving subfolder names
+subfolder <- list("primeprobe", "flanker", "stroop", "simon")
+
+# Reading data
+processed <-
+  tibble(task = subfolder,
+         rt_data = map(subfolder,
+                       ~ read_plus(subfolder_name = .x,
+                                   pattern = ".tsv$",
+                                   path = "data/Processed/",
+                                   sep = "\t",
+                                   exclude = "_Acc_")),
+         acc_data = map(subfolder,
+                        ~ read_plus(subfolder_name = .x,
+                                    pattern = ".tsv$",
+                                    path = "data/Processed/",
+                                    sep = "\t",
+                                    exclude = "_Rt_")))
+
+# Reading original study effect sizes
+original <- read_tsv("original_study_data.tsv")
+```
+
+# Set task names
+
+```{r}
+processed$rt_data <- set_names(processed$rt_data, processed$task)
+
+processed$acc_data <- set_names(processed$acc_data, processed$task)
+```
+
+# Summarise data
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(cse_plot_rt_data = map(rt_data,
+                                . %>% 
+                                  mutate(isPrevCongruent = case_when(isPrevCongruent ==  0L ~ "Incongruent",
+                                                                     isPrevCongruent ==  1L ~ "Congruent"),
+                                         isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
+                                                                 isCongruent ==  1L ~ "Congruent")) %>%
+                                  group_by(participant_id, isPrevCongruent, isCongruent) %>% 
+                                  summarise(N = n(),
+                                            mean_rt = mean(rt, na.rm = T),
+                                            sd_rt = sd(rt, na.rm = T),
+                                            se_rt = sd_rt / sqrt(N))),
+         cse_plot_acc_data = map(acc_data,
+                                . %>% 
+                                  mutate(isPrevCongruent = case_when(isPrevCongruent ==  0L ~ "Incongruent",
+                                                                     isPrevCongruent ==  1L ~ "Congruent"),
+                                         isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
+                                                                 isCongruent ==  1L ~ "Congruent")) %>%
+                                  group_by(participant_id, isPrevCongruent, isCongruent) %>% 
+                                  summarise(N = n(),
+                                            mean_acc = mean(isCorrect, na.rm = T),
+                                            sd_acc = sd(isCorrect, na.rm = T),
+                                            se_acc = sd_acc / sqrt(N))))
+
+# Not sure how to purrrify this one
+for (i in 1:nrow(processed)) {
+  processed$cse_plot_acc_data[[i]]$task <- processed$task[[i]]
+  processed$cse_plot_rt_data[[i]]$task <- processed$task[[i]]
+}
+
+```
+
+# Figures
+
+## RT
+
+```{r}
+ggplot(processed %>% unnest(cse_plot_rt_data), 
+                 aes(x = isPrevCongruent, 
+                     y = mean_rt, 
+                     shape = isCongruent, 
+                     group = isCongruent)) +
+  stat_summary(geom = "point", position = position_dodge(width = .5),
+               fun.y = mean, size = 3) + 
+  stat_summary(geom = "errorbar", position = position_dodge(width = .5),
+               fun.data = mean_cl_normal, width = 0) +
+  stat_summary(geom = "line", position = position_dodge(.5),
+               fun.y = mean) + 
+  facet_grid(.~task) + 
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(550, 1000)) +
+  scale_x_discrete(expand = c(.5, 0)) +
+  ggtitle("Mean response times by condition") +
+  xlab("Congruency of the previous trial") +
+  ylab("Response time +/- 95% CI") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+  papaja::theme_apa() +
+  theme(#legend.position = c(0.85, 0.5),
+        axis.line = element_line(color = "black"))
+
+ggsave("figures/weissman_replication_rt_cse_alt.png", 
+       width = 14.4, height = 8, plot = last_plot())
+```
+
+## Accuracy
+
+```{r}
+ggplot(processed %>% unnest(cse_plot_acc_data), 
+                 aes(x = isPrevCongruent, 
+                     y = mean_acc, 
+                     shape = isCongruent, 
+                     group = isCongruent)) +
+  stat_summary(geom = "point", position = position_dodge(width = .5),
+               fun.y = mean, size = 3) + 
+  stat_summary(geom = "errorbar", position = position_dodge(width = .5),
+               fun.data = mean_cl_normal, width = 0) +
+  stat_summary(geom = "line", position = position_dodge(.5),
+               fun.y = mean) + 
+  facet_grid(.~task) + 
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(0.93, 1)) +
+  scale_x_discrete(expand = c(.5, 0)) +
+  ggtitle("Mean accuracy by condition") +
+  xlab("Congruency of the previous trial") +
+  ylab("Accuracy +/- 95% CI") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+  papaja::theme_apa() +
+  theme(#legend.position = c(0.85, 0.5),
+        axis.line = element_line(color = "black"))
+
+ggsave("figures/weissman_replication_acc_cse_alt.png", 
+       width = 14.4, height = 8, plot = last_plot())
+```
