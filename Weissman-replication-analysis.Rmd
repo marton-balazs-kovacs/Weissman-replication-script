@@ -69,13 +69,19 @@ processed <-
                                    pattern = ".tsv$",
                                    path = "data/Processed/",
                                    sep = "\t",
-                                   exclude = "_Acc_")),
+                                   include = "_Rt_")),
          acc_data = map(subfolder,
                         ~ read_plus(subfolder_name = .x,
                                     pattern = ".tsv$",
                                     path = "data/Processed/",
                                     sep = "\t",
-                                    exclude = "_Rt_")))
+                                    include = "_Acc_")),
+         acc_exp_data = map(subfolder,
+                        ~ read_plus(subfolder_name = .x,
+                                    pattern = ".tsv$",
+                                    path = "data/Processed/",
+                                    sep = "\t",
+                                    include = "Acc_Exploratory_")))
 
 # Reading original study effect sizes
 original <- read_tsv("original_study_data.tsv")
@@ -87,12 +93,14 @@ original <- read_tsv("original_study_data.tsv")
 processed$rt_data <- set_names(processed$rt_data, processed$task)
 
 processed$acc_data <- set_names(processed$acc_data, processed$task)
+
+processed$acc_exp_data <- set_names(processed$acc_exp_data, processed$task)
 ```
 
 # Descriptive statistics of the sample size
 ## Number of participants left after exclusion
 
-The number of participants is the same for the reaction time and accuracy analysis as well
+The number of participants is the same for the reaction time, the accuracy, and the exploratory analyses as well
 
 ```{r}
 map(processed$rt_data,
@@ -118,9 +126,17 @@ map(processed$acc_data,
       count())
 ```
 
+### For the accuracy exploratory analysis
+
+```{r}
+map(processed$acc_exp_data,
+    . %>% 
+      count())
+```
+
 ## Age
 
-We calculated the following statistics based on the reaction time data file, but because it contains the same participants as the accuracy data file there should be no difference between the results.
+We calculated the following statistics based on the reaction time data file, but because it contains the same participants as the accuracy data, and the exploratory data files there should be no difference between the results.
 
 ```{r}
 map_df(processed$rt_data,
@@ -272,6 +288,53 @@ cowplot::plot_grid(plotlist = processed$cse_plot_acc)
 
 ```{r}
 ggsave("figures/weissman_replication_acc_cse.png", width = 14.4, height = 8, plot = last_plot())
+```
+
+## For the exploratory accuracy data
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(cse_plot_acc_exp_data = map(acc_exp_data,
+                                . %>% 
+                                  mutate(isPrevCongruent = case_when(isPrevCongruent ==  0L ~ "Incongruent",
+                                                                     isPrevCongruent ==  1L ~ "Congruent"),
+                                         isCongruent = case_when(isCongruent ==  0L ~ "Incongruent",
+                                                                 isCongruent ==  1L ~ "Congruent")) %>%
+                                  group_by(participant_id, isPrevCongruent, isCongruent) %>% 
+                                  summarise(participant_mean_acc = mean(isCorrect, na.rm = T)) %>% 
+                                  group_by(isPrevCongruent, isCongruent) %>% 
+                                  summarise(N = n(),
+                                            mean_acc = mean(participant_mean_acc, na.rm = T),
+                                            sd_acc = sd(participant_mean_acc, na.rm = T),
+                                            se_acc = sd_acc / sqrt(N))),
+         cse_plot_acc_exp = map2(cse_plot_acc_exp_data, task,
+                           ~ ggplot(.x, aes(x = isPrevCongruent, y = mean_acc, shape = isCongruent, group = isCongruent)) +
+                             geom_path() +
+                             geom_point(size = 2) +
+                             geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width=.1) +
+                             scale_shape_manual(values=c(4, 16)) + 
+                             scale_y_continuous(limits = c(0.93, 1)) +
+                             scale_x_discrete(expand=c(1, 0)) +
+                             ggtitle(stringr::str_to_title(.y)) +
+                             xlab("Congruency of the previous trial")+
+                             ylab("Accuracy") +
+                             guides(shape = guide_legend(title="Congruency of \n the current trial")) +
+                             papaja::theme_apa() +
+                             theme(legend.position = c(0.85, 0.5),
+                                   axis.line = element_line(color = "black"))))
+```
+
+## Creating figure for the paper
+
+```{r}
+cowplot::plot_grid(plotlist = processed$cse_plot_acc_exp)
+```
+
+## Saving the figure
+
+```{r}
+ggsave("figures/weissman_replication_acc_exp_cse.png", width = 14.4, height = 8, plot = last_plot())
 ```
 
 # Reaction time analyis
@@ -1302,7 +1365,7 @@ processed$bf_interaction_acc %>%
 ```
 
 ###### Finding the robustness region for the interaction effect
-## ITT
+
 ```{r}
 # Finding the lower boundary of the robustness region
 ## Primeprobe
@@ -1562,4 +1625,456 @@ Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
    sdtheory = 0.062,
    dftheory = 10^10,
    tail = 1)
+```
+
+# Exploratory analyses
+## I. analysis: Testing whether the CSE was present in the different tasks based on error rates
+
+One of the reviewers requested to compute the CSE based on the error rates after excluding the post error trials, therefore we account for the possible confounding effect of post-error processing.
+
+### Preprocessing data
+
+We are calculating the accuracy for the analysis for each participant in each condition for each task.
+
+```{r calculating mean dev acc exp}
+processed <-
+  processed %>% 
+  mutate(acc_exp_data = map(acc_exp_data,
+                        . %>% 
+                          group_by(participant_id, isCongruent, isPrevCongruent) %>% 
+                          summarise(AccConditionalMean = mean(isCorrect, na.rm = T)) %>% 
+                          ungroup() %>% 
+                          mutate(isCongruent = as_factor(isCongruent),
+                                 isPrevCongruent = as_factor(isPrevCongruent),
+                                 participant_id = as_factor(participant_id))))
+```
+
+We are calculating the main congruency effect of the current (n) trial, the main congruency effect of the previous trial (n-1) and the interaction effect (CSE) between them for each participant.
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(acc_exp_effect_data = map(acc_exp_data,
+                              . %>% 
+                                ungroup() %>% 
+                                mutate(condition = case_when(isPrevCongruent == 0L & isCongruent == 0L ~ "ii",
+                                                             isPrevCongruent == 0L & isCongruent == 1L ~ "ic",
+                                                             isPrevCongruent == 1L & isCongruent == 0L ~ "ci",
+                                                             isPrevCongruent == 1L & isCongruent == 1L ~ "cc",
+                                                             TRUE ~ NA_character_)) %>% 
+                                select(-isPrevCongruent, -isCongruent) %>% 
+                                spread(key = condition, value = AccConditionalMean) %>% 
+                                mutate(congruencyEffect = ((ci + ii) / 2) - ((cc + ic) / 2),
+                                       prevCongruencyEffect = ((ci + cc) / 2) - ((ii + ic) / 2),
+                                       cseEffect = (ci - cc) - (ii - ic))))
+```
+
+### Running the analysis
+
+We are running a 2 × 2 repeated-measures ANOVA per task with accuracy as dependent variable. The two factors of the ANOVA are Previous Trial Congruency (congruent, incongruent) and Current Trial Congruency (congruent, incongruent).
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(anova_acc_exp = map(acc_exp_data,
+                        ~ aov(AccConditionalMean ~ isCongruent * isPrevCongruent + Error(participant_id / (isCongruent * isPrevCongruent)), data = .x)))
+
+# Print the results with names
+processed$anova_acc_exp %>% 
+  set_names(., processed$task) %>% 
+  map(., summary)
+```
+
+None of the interaction effects are significant, therefore we will not run any follow up analysis for the accuracy analysis.
+
+We are calculating the partial eta square as an effect size estimate for the ANOVA.
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(anova_acc_exp_eta = map(anova_acc_exp,
+                            ~ eta_sq(.x, partial = TRUE) %>% 
+                              filter(stratum == "participant_id:isCongruent:isPrevCongruent")))
+
+# Print results with names
+processed$anova_acc_exp_eta %>% 
+  set_names(., processed$task) %>% 
+  knitr::kable()
+```
+
+### Calculating Bayes factors
+#### Preprocessing data for the Bayes factor analysis
+
+We are substracting the F values for each effect (main congruency effect of current trial, main congruency effect of previous trial and interaction effect) from the ANOVA.
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(anova_acc_exp_f = map(anova_acc_exp,
+                          . %>%
+                            broom::tidy() %>% 
+                            select(term, statistic) %>% 
+                            transmute(term = case_when(term == "isCongruent" ~ "mainEffectIsCongruent",
+                                                       term == "isPrevCongruent" ~ "mainEffectIsPrevCongruent",
+                                                       term == "isCongruent:isPrevCongruent" ~ "interactionEffect",
+                                                       term == "Residuals" ~ term),
+                                      fValue = statistic)))
+```
+
+We are calculating the mean effects (main congruency effect of current trial, main congruency effect of previous trial and interaction effect) for each task.
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(anova_acc_exp_raw_effect = map(acc_exp_effect_data,
+                                   . %>% 
+                                     summarise(mainEffectIsCongruent = mean(congruencyEffect, na.rm = T),
+                                               mainEffectIsPrevCongruent = mean(prevCongruencyEffect, na.rm = T),
+                                               interactionEffect = mean(cseEffect, na.rm = T),
+                                               nParticipant = n()) %>%
+                                     gather(key = "term", value = "rawEffect", -nParticipant)))
+```
+
+We are adding the calucalted F-values for each effect to the calculated mean effects.
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(anova_acc_exp_raw_effect = map2(anova_acc_exp_raw_effect, anova_acc_exp_f,
+                                    ~ inner_join(.x, .y, by = "term") %>% 
+                                      mutate(se = rawEffect / sqrt(fValue))))
+```
+
+We are using the same preprocessed original effect sizes as we used for the conformatory accuracy analysis saved in the object named: original_acc_effect.
+
+Joining the effect sizes of the replicated study with the effect sizes of the current study.
+
+```{r}
+processed <-
+  processed %>%
+  mutate(task = as.character(task)) %>% # vector needs to be character class (instead of a list) for joining
+  mutate(anova_acc_exp_bf_effect = map2(anova_acc_exp_raw_effect, original_effect_accuracy,
+                              ~ left_join(.x, .y, by = "term")))
+```
+
+#### Calculating the Bayes factor
+##### For the interaction effect
+
+A half-normal distribution is used with a mode of 0 and a SD equal to the half of the congruency effect (in ms) for the particular task in the original data set by Weissman et al. (2014) to model the prediction of the interaction effect. 
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(bf_interaction_acc_exp = map(anova_acc_exp_bf_effect,
+                                 ~ Bf(sd = .x$se[3],
+                                      obtained = -(.x$rawEffect[3]),
+                                      dfdata = .x$nParticipant[1] - 1,
+                                      meanoftheory = 0,
+                                      sdtheory = .x$originalRawEffect[1] / 2,
+                                      dftheory = 10^10,
+                                      tail = 1)))
+
+# Print results with names
+processed$bf_interaction_acc_exp %>% 
+  set_names(., processed$task)
+```
+
+###### Finding the robustness region for the interaction effect
+
+```{r}
+# Finding the lower boundary of the robustness region
+## Primeprobe
+primeprobe_acc_exp <- processed$anova_acc_exp_bf_effect[[1]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Flanker
+flanker_acc_exp <- processed$anova_acc_exp_bf_effect[[2]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Stroop
+stroop_acc_exp <- processed$anova_acc_exp_bf_effect[[3]]
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Simon
+simon_acc_exp <- processed$anova_acc_exp_bf_effect[[4]]
+
+# Bf(sd = simon_acc_exp$se[3],
+#    obtained = -(simon_acc_exp$rawEffect[3]),
+#    dfdata = simon_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = , 
+#    dftheory = 10^10,
+#    tail = 1)
+
+# Finding the upper boundary of the robustness region
+## Primeprobe
+# Bf(sd = primeprobe_acc_exp$se[3],
+#    obtained = -(primeprobe_acc_exp$rawEffect[3]),
+#    dfdata = primeprobe_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Flanker
+# Bf(sd = flanker_acc_exp$se[3],
+#    obtained = -(flanker_acc_exp$rawEffect[3]),
+#    dfdata = flanker_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Stroop
+# Bf(sd = stroop_acc_exp$se[3],
+#    obtained = -(stroop_acc_exp$rawEffect[3]),
+#    dfdata = stroop_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Simon
+# Bf(sd = simon_acc_exp$se[3],
+#    obtained = -(simon_acc_exp$rawEffect[3]),
+#    dfdata = simon_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+```
+
+##### For the main congruency effect of the current trial
+
+To test the congruency main effect, the SD of the H1 model is set to the congruency effect reported by Weissman et al. (2014) for the given task. The other settings stay the same.
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(bf_congruency_acc_exp = map(anova_acc_exp_bf_effect,
+                                ~ Bf(sd = .x$se[1],
+                                     obtained = -(.x$rawEffect[1]),
+                                     dfdata = .x$nParticipant[1] - 1,
+                                     meanoftheory = 0,
+                                     sdtheory = .x$originalRawEffect[1],
+                                     dftheory = 10^10,
+                                     tail = 1))) 
+
+# Print results with names
+processed$bf_congruency_acc_exp %>% 
+  set_names(., processed$task)
+```
+
+###### Finding the robustness region for the main congruency effect
+
+```{r}
+# Finding the lower boundary of the robustness region
+## Primeprobe
+# Bf(sd = primeprobe_acc_exp$se[1],
+#    obtained = -(primeprobe_acc_exp$rawEffect[1]),
+#    dfdata = primeprobe_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Flanker
+
+### The lower limit is 0, because the Bf is inconslusive
+
+## Stroop
+# Bf(sd = stroop_acc_exp$se[1],
+#    obtained = -(stroop_acc_exp$rawEffect[1]),
+#    dfdata = stroop_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Simon
+# Bf(sd = simon_acc_exp$se[1],
+#    obtained = -(simon_acc_exp$rawEffect[1]),
+#    dfdata = simon_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+# Finding the upper boundary of the robustness region
+## Primeprobe
+# Bf(sd = primeprobe_acc_exp$se[1],
+#    obtained = -(primeprobe_acc_exp$rawEffect[1]),
+#    dfdata = primeprobe_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Flanker
+# Bf(sd = flanker_acc_exp$se[1],
+#    obtained = -(flanker_acc_exp$rawEffect[1]),
+#    dfdata = flanker_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Stroop
+# Bf(sd = stroop_acc_exp$se[1],
+#    obtained = -(stroop_acc_exp$rawEffect[1]),
+#    dfdata = stroop_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+## Simon
+# Bf(sd = simon_acc_exp$se[1],
+#    obtained = -(simon_acc_exp$rawEffect[1]),
+#    dfdata = simon_acc_exp$nParticipant[1] - 1,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+```
+
+### Follow up simple effects analysis
+#### Preprocessing data
+
+Saving the data of the task (primeprobe) with significant interaction between current trial congruency and previous trial congruency.
+
+```{r}
+simon <- processed$acc_exp_effect_data[[4]]
+```
+
+#### Running the analysis
+
+If the Bayes factor is greater than the preset threshold of B = 3 for the interaction effect in a given task we run a simple effects analyses, contrasting current-congruent congruent (cC) and current-incongruent congruent (iC) trials.
+
+```{r current congruent follow up comparison for acc exp}
+current_congruent <- 
+  t.test(simon$cc, simon$ic, paired = TRUE) %>% 
+  broom::tidy()
+
+current_congruent %>% knitr::kable()
+```
+
+current-congruent incongruent (cI) and current-incongruent incongruent (iI) trials in another.
+
+```{r current incongruent follow up comparison for acc exp}
+current_incongruent <- 
+  t.test(simon$ci, simon$ii, paired = TRUE) %>% 
+  broom::tidy()
+
+current_incongruent %>% knitr::kable()
+```
+
+#### Calculating the Bayes factor for the follow up analysis
+
+The prior H1 model is a half-normal distribution with a mode of 0 and an SD equal to half of the CSE estimate for that given task, i.e., the originally reported congruency effect divided by four.
+
+#### Current congruent follow-up comparison
+
+```{r}
+Bf(sd = current_congruent$estimate / current_congruent$statistic,
+   obtained = current_congruent$estimate,
+   dfdata = current_congruent$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_acc_exp_bf_effect[[4]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+##### Finding the robustness region for the current congruent follow up analysis
+
+```{r}
+# Finding the lower boundary of the robustness region
+# Bf(sd = current_congruent$estimate / current_congruent$statistic,
+#    obtained = current_congruent$estimate,
+#    dfdata = current_congruent$parameter,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+
+# Finding the upper boundary of the robustness region
+# Bf(sd = current_congruent$estimate / current_congruent$statistic,
+#    obtained = current_congruent$estimate,
+#    dfdata = current_congruent$parameter,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+```
+
+We found moderate evidence for the H1 (t = 2.39, bf = 6.12, RR[0.00083, 0.015]).
+
+#### Current icongruent follow-up comparison
+
+```{r}
+Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
+   obtained = -(current_incongruent$estimate),
+   dfdata = current_incongruent$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_acc_exp_bf_effect[[4]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+##### Finding the robustness region for the current incongruent follow up analysis
+
+```{r}
+# Finding the lower boundary of the robustness region
+
+### The lower limit is 0, because the Bf is inconslusive
+
+# Finding the upper boundary of the robustness region
+# Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
+#    obtained = -(current_incongruent$estimate),
+#    dfdata = current_incongruent$parameter,
+#    meanoftheory = 0,
+#    sdtheory = ,
+#    dftheory = 10^10,
+#    tail = 1)
+```
+
+## II. analysis: Testing whether the CSE was present with BIS
+
+One of the reviewers requested a test with Balanced Integration Scores (BIS, Liesefeldt & Janczyk, 2019, Behavior Research Methods, 51, 40–60).
+
+### Joining the mean accuracy and mean rt data per condition per participant
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(bis_data = map2(rt_data, acc_data,
+                         ~ left_join(.x, .y, by = c("participant_id", "isCongruent", "isPrevCongruent"))))
+```
+
+### Calculating BIS score
+
+```{r}
+processed <-
+  processed %>% 
+  mutate(bis_data = map(bis_data,
+                        . %>% 
+                          mutate(N = length(participant_id),
+                                 bis_score = ((AccConditionalMean - mean(AccConditionalMean)) /  sqrt( ((N - 1) / N) * var(AccConditionalMean))) - ((rtConditionalMean - mean(rtConditionalMean)) /  sqrt( ((N - 1) / N) * var(rtConditionalMean))))))
+```
+
+### Running analysis
+
+```{r}
+processed <-
+  processed %>%
+  mutate(anova_bis = map(bis_data,
+                        ~ aov(bis_score ~ isCongruent * isPrevCongruent + Error(participant_id / (isCongruent * isPrevCongruent)), data = .x)))
+
+# Print the results with names
+processed$anova_bis %>%
+  set_names(., processed$task) %>%
+  map(., summary)
 ```
