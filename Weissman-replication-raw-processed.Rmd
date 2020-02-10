@@ -169,7 +169,8 @@ raw$response[[1]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - probeOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_))
+                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+  select(task, everything())
 
 ## Flanker
 raw$response[[2]] <- 
@@ -178,7 +179,8 @@ raw$response[[2]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_))
+                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+  select(task, everything())
 
 # Stroop
 raw$response[[3]] <-
@@ -187,7 +189,8 @@ raw$response[[3]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_))
+                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+  select(task, everything())
 
 # Simon
 raw$response[[4]] <-
@@ -196,7 +199,8 @@ raw$response[[4]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_))
+                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+  select(task, everything())
 ```
 
 # Add variables storing whether the previous trials were congruent and correct
@@ -362,19 +366,35 @@ raw <-
 
 # Save task to individual dataframes
 
+```{r create output directories}
+out_dir <- "data/Processed/"
+if(!dir.exists(out_dir)){
+  dir.create(out_dir,recursive = T)
+}
+for (i in 1:length(subfolder)) {
+  out_dir2 <- paste0(out_dir,subfolder[i])
+  if(!dir.exists(out_dir2)  ){
+    dir.create(out_dir2,recursive = T)
+  }
+}
+
+```
+
 ```{r save tasks}
+
+
 # Saving data for the reaction time analysis
 walk2(raw$responseRtAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = "data/Processed/",
+                   folder_path = out_dir,
                    extra_name = "_Rt"))
 
 # Saving data for the accuracy analysis
 walk2(raw$responseAccAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = "data/Processed/",
+                   folder_path = out_dir,
                    extra_name = "_Acc"))
 
 # Saving data for the exploratory accuracy analysis
