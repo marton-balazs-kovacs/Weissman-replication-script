@@ -32,24 +32,13 @@ processed <-
                                    pattern = ".tsv$",
                                    path = "data/Processed/",
                                    sep = "\t",
-                                   exclude = "_Acc_")),
+                                   include = "_Acc_")),
          acc_data = map(subfolder,
                         ~ read_plus(subfolder_name = .x,
                                     pattern = ".tsv$",
                                     path = "data/Processed/",
                                     sep = "\t",
-                                    exclude = "_Rt_")))
-
-# Reading original study effect sizes
-original <- read_tsv("original_study_data.tsv")
-```
-
-# Set task names
-
-```{r}
-processed$rt_data <- set_names(processed$rt_data, processed$task)
-
-processed$acc_data <- set_names(processed$acc_data, processed$task)
+                                    include = "_Rt_")))
 ```
 
 # Summarise data
@@ -79,13 +68,6 @@ processed <-
                                             mean_acc = mean(isCorrect, na.rm = T),
                                             sd_acc = sd(isCorrect, na.rm = T),
                                             se_acc = sd_acc / sqrt(N))))
-
-# Not sure how to purrrify this one
-for (i in 1:nrow(processed)) {
-  processed$cse_plot_acc_data[[i]]$task <- processed$task[[i]]
-  processed$cse_plot_rt_data[[i]]$task <- processed$task[[i]]
-}
-
 ```
 
 # Figures
@@ -93,20 +75,23 @@ for (i in 1:nrow(processed)) {
 ## RT
 
 ```{r}
-ggplot(processed %>% unnest(cse_plot_rt_data), 
-                 aes(x = isPrevCongruent, 
-                     y = mean_rt, 
-                     shape = isCongruent, 
-                     group = isCongruent)) +
+processed %>% 
+  select(cse_plot_rt_data, task) %>% 
+  unnest(c(cse_plot_rt_data, task)) %>% 
+  ggplot() +
+  aes(x = isPrevCongruent, 
+      y = mean_rt, 
+      shape = isCongruent, 
+      group = isCongruent) +
   stat_summary(geom = "point", position = position_dodge(width = .5),
                fun.y = mean, size = 3) + 
   stat_summary(geom = "errorbar", position = position_dodge(width = .5),
                fun.data = mean_cl_normal, width = 0) +
   stat_summary(geom = "line", position = position_dodge(.5),
                fun.y = mean) + 
-  facet_grid(.~task) + 
+  facet_grid(. ~ task) + 
   scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(550, 1000)) +
+  # scale_y_continuous(limits = c(600, 900)) +
   scale_x_discrete(expand = c(.5, 0)) +
   ggtitle("Mean response times by condition") +
   xlab("Congruency of the previous trial") +
@@ -123,11 +108,14 @@ ggsave("figures/weissman_replication_rt_cse_alt.png",
 ## Accuracy
 
 ```{r}
-ggplot(processed %>% unnest(cse_plot_acc_data), 
-                 aes(x = isPrevCongruent, 
-                     y = mean_acc, 
-                     shape = isCongruent, 
-                     group = isCongruent)) +
+processed %>% 
+  select(cse_plot_acc_data, task) %>% 
+  unnest(c(cse_plot_acc_data, task)) %>% 
+  ggplot() +
+  aes(x = isPrevCongruent, 
+      y = mean_rt, 
+      shape = isCongruent, 
+      group = isCongruent) +
   stat_summary(geom = "point", position = position_dodge(width = .5),
                fun.y = mean, size = 3) + 
   stat_summary(geom = "errorbar", position = position_dodge(width = .5),
@@ -136,7 +124,7 @@ ggplot(processed %>% unnest(cse_plot_acc_data),
                fun.y = mean) + 
   facet_grid(.~task) + 
   scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(0.93, 1)) +
+  scale_y_continuous(limits = c(0.95, 1)) +
   scale_x_discrete(expand = c(.5, 0)) +
   ggtitle("Mean accuracy by condition") +
   xlab("Congruency of the previous trial") +
