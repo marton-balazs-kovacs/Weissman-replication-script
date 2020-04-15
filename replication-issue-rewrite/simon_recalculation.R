@@ -53,12 +53,16 @@ simon <- left_join(simon, ppt_to_drop, by = "participant_id") %>%
   mutate(prop = sum(Acc) / n() * 100,
          dropParticipantAcc = case_when(prop < 70 ~ 1L,
                                         TRUE ~ 0L))%>% 
-  filter(dropParticipantAcc == 0L,
-         dropParticipantRt  == 0L) %>% 
   mutate(ageDrop = case_when(age < 18 ~ 1L,
                              age > 99 ~ 1L,
-                             TRUE ~ 0L)) %>%
-  filter(ageDrop != 1L) %>% 
+                             TRUE ~ 0L)) 
+
+simon_all <- simon %>% ungroup
+
+simon <- simon %>%
+  filter(ageDrop != 1L,
+         dropParticipantAcc == 0L,
+         dropParticipantRt  == 0L) %>% 
   ungroup()
 
 #This next step should be completed after deleting practice trials AND
@@ -201,12 +205,25 @@ ggplot(CSE_plot_data, aes(x =prevcong, y = mean,
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1) +
   geom_line() +
   geom_point(size = 2) +
+  # RT data from excluded trials
+  geom_point(data = simon_all %>% 
+               arrange(participant_id, trialId) %>%
+               mutate(firstInBlock = if_else(block == lag(block), F, T),
+                      firstInBlock = if_else(is.na(firstInBlock), T, firstInBlock)) %>%
+               filter(firstInBlock) %>% 
+               mutate(congruent = c("Incongruent", "Congruent")[isCongruent + 1]),
+             aes(y = RT, x = 1.5),
+             colour = 'red', position = 'jitter', alpha = .25) +
   scale_shape_manual(values=c(4, 16)) +
   xlab("Congruency of Trial N-1")+
   ylab("Reaction time (ms)") +
-  ylim(500, 1000) +
+  # ylim(500, 1000) +
   guides(shape = guide_legend(title="Congruency of \n Trial N")) +
   th +
   theme(legend.title.align=0.5) +
   theme(legend.position = "right") 
 #dev.off()
+
+# Plot by exclusion
+
+
