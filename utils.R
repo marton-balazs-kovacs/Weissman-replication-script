@@ -91,11 +91,11 @@ remove_local_data <- function(local_data_pth) {
 #' @param sep Used as delim in read_delim.
 #' 
 #' @return All files that meets the criteria merged into a tibble from the specified subdirectory.
-read_plus <- function(pattern, path, subfolder_name, include = NULL, sep) {
+read_plus <- function(pattern, path, subfolder_name, exclude = NULL, sep) {
   files <- tibble(list = list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T))
   
-  if(!is.null(include)){
-  files <- filter(files, str_detect(list, include))
+  if(!is.null(exclude)){
+    files <- filter(files, !str_detect(list, exclude))
   }
   
   files %>%
