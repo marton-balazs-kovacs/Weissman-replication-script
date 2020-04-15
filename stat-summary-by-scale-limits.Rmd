@@ -1,0 +1,55 @@
+---
+title: "Stat-summary-by-scale-limits"
+author: "Matt Jaquiery"
+date: "15/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Generate some data.
+
+```{r}
+library(tidyverse)
+d <- crossing(
+  m = sample(1:5, 5, T),
+  t = 1:100
+) %>% 
+  mutate(
+    p = factor(m),
+    v = rnorm(n(), m)
+  )
+
+d
+
+gg <- ggplot(d, aes(x = p, y = v)) +
+  geom_point(position = 'jitter')
+
+gg
+
+```
+
+Plot the data with stat_summary.
+
+```{r}
+
+ggss <- gg + 
+  stat_summary(aes(group = p), geom = 'point', fun.y = mean, colour = 'red') +
+  stat_summary(aes(group = p), geom = 'errorbar', fun.data = mean_cl_normal, colour = 'red', width = 0)
+
+ggss
+
+```
+
+Plot with scale_y_continuous with limits in place.
+
+```{r}
+
+ggl <- ggss + 
+  scale_y_continuous(limits = c(1, 6))
+
+ggl
+
+```
