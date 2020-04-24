@@ -35,8 +35,22 @@ ggplot(flags, aes(x = number, y = value)) +
   facet_grid(flag~block)
 
 # Kinda hard to see anything on the above, so let's instead only look at the first and last 5 trials in a block
-first_and_last <- c(1:5, (max(tt$number)-5):max(tt$number))
+first_and_last <- c(1:5, (max(tt$number) - 5):max(tt$number))
 flags %>% filter(number %in% first_and_last) %>%
   ggplot(aes(x = factor(number), y = value)) + 
+  geom_line(aes(group = paste0(id, '-', number < mean(tt$number))), 
+            alpha = .01, position = position_jitter(.1, .1)) +
   geom_point(alpha = .05, position = position_jitter(.1, .1)) +
-  facet_grid(flag ~ block)
+  facet_grid(flag ~ block, labeller = label_both) +
+  labs(x = "Trial number in block",
+       y = "Flag value") +
+  theme_bw() +
+  theme(panel.grid = element_blank())
+
+# Table for clarity
+tt <- tt %>% 
+  mutate(isBookend = if_else(tt$number %in% c(1, max(tt$number)),
+                             "Bookend", "Middle trials"),
+         congByFlag = if_else(flagCurCong, "Congruent", "Incongruent")) 
+
+table(tt$stimLocation, tt$responseTarget, tt$isBookend, tt$congByFlag)
