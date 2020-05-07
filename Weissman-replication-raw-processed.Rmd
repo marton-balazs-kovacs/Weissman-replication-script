@@ -169,7 +169,8 @@ raw$response[[1]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - probeOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+                        responseContent == "TIMEOUT" ~ NA_real_),
+         trial = (trialId-23) - (block-1)*97 ) %>% 
   select(task, everything())
 
 ## Flanker
@@ -179,7 +180,8 @@ raw$response[[2]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+                        responseContent == "TIMEOUT" ~ NA_real_),
+         trial = (trialId-23) - (block-1)*81) %>% 
   select(task, everything())
 
 # Stroop
@@ -189,7 +191,8 @@ raw$response[[3]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+                        responseContent == "TIMEOUT" ~ NA_real_),
+         trial = (trialId-23) - (block-1)*81) %>% 
   select(task, everything())
 
 # Simon
@@ -199,7 +202,8 @@ raw$response[[4]] <-
   select(response) %>% 
   unnest(response) %>%
   mutate(rt = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
-                        responseContent == "TIMEOUT" ~ NA_real_)) %>% 
+                        responseContent == "TIMEOUT" ~ NA_real_),
+         trial = (trialId-23) - (block-1)*81) %>% 
   select(task, everything())
 ```
 
@@ -211,12 +215,12 @@ raw <-
   mutate(response = map(response,
                         . %>% 
                           group_by(participant_id) %>% 
-                          mutate(isPrevCongruent = case_when(trialId == 24 ~ NA_integer_,
-                                                        trialId > 24 & lag(isCongruent) == 1L ~ 1L,
-                                                        trialId > 24 & lag(isCongruent) == 0L ~ 0L),
-                                 isPrevCorrect = case_when(trialId == 24 ~ NA_integer_,
-                                                           trialId > 24 & lag(isCorrect) == 1L ~ 1L,
-                                                           trialId > 24 & lag(isCorrect) == 0L ~ 0L))))
+                          mutate(isPrevCongruent = case_when(trial < 2 ~ NA_integer_,
+                                                        trial >= 2 & lag(isCongruent) == 1L ~ 1L,
+                                                        trial >= 2 & lag(isCongruent) == 0L ~ 0L),
+                                 isPrevCorrect = case_when(trial < 2 ~ NA_integer_,
+                                                           trial >= 2 & lag(isCorrect) == 1L ~ 1L,
+                                                           trial >= 2 & lag(isCorrect) == 0L ~ 0L))))
 ```
 
 # Exclude participants where all the trials are time out trials
@@ -282,8 +286,9 @@ raw <-
                           mutate(dropTrialRt = case_when(rtConditionalMean + 2.5 * rtConditionalSd < rt ~ 1L,
                                                          rtConditionalMean - 2.5 * rtConditionalSd > rt ~ 1L,
                                                          TRUE ~ 0L),
-                                 isPrevDropTrialRt = case_when(trialId > 24 & lag(dropTrialRt) == 1L ~ 1L,
-                                                               trialId > 24 & lag(dropTrialRt) == 0L ~ 0L),
+                                 isPrevDropTrialRt = case_when(trial <= 2 ~ NA_integer_, #at this point there should be no trial == 1 trials because they were removed is.na(PrevCongruent) was filtered, trial == 2 trials will have NO previous trial as the immediately preceding trial will be the last trial of the previous block
+                                                               trial > 2 & lag(dropTrialRt) == 1L ~ 1L,
+                                                               trial > 2 & lag(dropTrialRt) == 0L ~ 0L),
                                  dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
                                                                rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
                                                                TRUE ~ 0L))))
