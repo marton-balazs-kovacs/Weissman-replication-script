@@ -2,20 +2,23 @@ rm(list = ls())
 ######## CONFLICT TASK DATA ########
 #### Pre-process data ####
 
+library(testthat)
 library(tidyverse)
 #Load the merged data files
-simon <- read_delim("replication-issue-rewrite/simon_data.tsv", delim = "\t")
+df <- read_delim("replication-issue-rewrite/simon_data.tsv", delim = "\t")
 
-names(simon)[names(simon) == "task"] <- "taskname" #We can ignore this variable, the only reason it's here
+names(df)[names(df) == "task"] <- "taskname" #We can ignore this variable, the only reason it's here
 #is because I'd normally load multiple tasks within this script
 
 #SIMON
 #Create a variable that codes which task the data is coming from 
-simon <- simon[simon$isPractice == 0, ] #Remove practice trials
-simon$task <- rep(0, length(simon$taskname))
+df <- df[df$isPractice == 0, ] #Remove practice trials
+df$task <- rep(0, length(df$taskname))
+
+
 
 #Remove the second response of duplicate participants
-participant_duplicate <- simon %>% 
+participant_duplicate <- df %>% 
   select(participant_id, id, trialId, consentTime) %>%
   group_by(participant_id, id) %>% 
   count() %>%
@@ -28,14 +31,14 @@ participant_duplicate_drop <-
   filter(id %in% c(82, 77, 57, 8, 84)) %>% 
   select(participant_id, id)
 
-simon <- simon %>% anti_join(., participant_duplicate_drop, by = c("participant_id", "id")) %>%
+df <- df %>% anti_join(., participant_duplicate_drop, by = c("participant_id", "id")) %>%
   mutate(RT = case_when(responseContent != "TIMEOUT" ~ responseTime - stimOnset,
                         responseContent == "TIMEOUT" ~ NA_real_))
 
 #Remove outlier participants
 #Participant level outlier screening here is based on ALL RTS OF A PARTICIPANT,
 #except for timeouts
-ppt_to_drop <- simon %>%
+ppt_to_drop <- df %>%
   group_by(participant_id) %>% 
   summarise(rtParticipantMean = mean(RT, na.rm = T), 
             rtParticipantSd = sd(RT, na.rm = T)) %>% 
@@ -43,7 +46,7 @@ ppt_to_drop <- simon %>%
   mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
          rtGrandSd = sd(rtParticipantMean, na.rm = T))
 
-simon <- left_join(simon, ppt_to_drop, by = "participant_id") %>% 
+df <- left_join(df, ppt_to_drop, by = "participant_id") %>% 
   group_by(participant_id) %>% 
   mutate(dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
                                        rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
@@ -64,28 +67,41 @@ simon <- left_join(simon, ppt_to_drop, by = "participant_id") %>%
 
 #This next step should be completed after deleting practice trials AND
 #after removing participants
-sblocks <- length(unique(simon$block))          #should be 4
-stnum <- length(unique(simon$trialId))          #should be 324
+sblocks <- length(unique(df$block))          #should be 4
+expect_equal(sblocks, 4)
+stnum <- length(unique(df$trialId))          #should be 324
+expect_equal(stnum, 324)
 stperb <- stnum / sblocks                       #should be 81
-ssubnum <- length(unique(simon$participant_id)) #should be 118
+expect_equal(stperb, 81)
+ssubnum <- length(unique(df$participant_id)) #should be 118
+expect_equal(ssubnum, 118)
 
 #simon$trial <- rep(rep(c(1:stperb), sblocks),ssubnum)
 #the column trial now counts every trial WITHIN a block, so trial == 1
 #would be the first trial of each BLOCK for a person
 
 #AN ALTERNATIVE WAY TO CALCULATE WITHIN-BLOCK TRIAL NUMBER:
-simon$trial <- (simon$trialId-23) - (simon$block-1)*81 
+df$trial <- (df$trialId-23) - (df$block-1)*81 
+
+# Check this matches with Matt's non-hardcoded version
+expect_equal(
+  df$trial,
+  df %>% 
+    nest(d = c(-id, -block)) %>%
+    mutate(d = map(d, ~ arrange(., trialId) %>% rowid_to_column('n'))) %>%
+    unnest(cols = c(d)) %>%
+    .$n)
 
 #Some renaming and recoding so that the new variables are
 #in line with the old code I had
-simon$subid <- simon$participant_id
-simon$cong <- 1-simon$isCongruent
-simon$resp <- simon$responseContent
-simon$trialid <- simon$trialId - 23
+df$subid <- df$participant_id
+df$cong <- 1-df$isCongruent
+df$resp <- df$responseContent
+df$trialid <- df$trialId - 23
 #IMPORTANT: trialid codes trial number WITHIN a participant, but
 #ACROSS blocks, so trialid == 1 is the first RT of a PERSON
 
-merged <- simon #I know this assignment seems pointless, this is because originally
+merged <- df #I know this assignment seems pointless, this is because originally
 #this code was set up to loop over different tasks
 
 #Preprocess data
