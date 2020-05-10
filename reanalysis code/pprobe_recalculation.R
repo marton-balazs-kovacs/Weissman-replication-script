@@ -131,8 +131,8 @@ merged <- left_join(merged, condinfo, by = c("subid", "cong", "precong"))
 merged <- merged %>% 
   filter(trial>1) %>%  #this should be (trial > 1)
   mutate(zscore = (trim-condm)/condsd) %>% 
-  mutate(outlier = case_when(zscore < 2.5 & zscore > -2.5 ~ 0,
-                             TRUE ~ 1))
+  mutate(outlier = case_when(zscore > 2.5 | zscore < -2.5 ~ 1,
+                             TRUE ~ 0))
 
 trial_num_check1 <- merged %>% 
   group_by(cong,precong) %>% 
