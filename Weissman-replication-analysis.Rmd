@@ -376,6 +376,7 @@ processed <-
                                        cseEffect = (ci - cc) - (ii - ic))))
 ```
 
+
 ### Running the analysis
 
 We are running a 2 × 2 repeated-measures ANOVA per task with mean RT as dependent variable. The two factors of the ANOVA are Previous Trial Congruency (congruent, incongruent) and Current Trial Congruency (congruent, incongruent).
@@ -440,6 +441,7 @@ processed <-
                                                interactionEffect = mean(cseEffect, na.rm = T),
                                                nParticipant = n()) %>%
                                      gather(key = "term", value = "rawEffect", -nParticipant)))
+#We can create a table with the magnitude of the CSE across tasks here, right?
 ```
 
 We are adding the calucalted F-values for each effect to the calculated mean effects.
