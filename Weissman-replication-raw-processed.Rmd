@@ -240,7 +240,7 @@ raw <-
 
 # Exclude each first test trial of every participant before calculating mean response times
 
-* 1: First trial for each participant
+* 1: First trial in each block for each participant
 
 ```{r}
 raw <- 
@@ -248,6 +248,7 @@ raw <-
   mutate(response = map(response,
                         . %>% 
                           filter(!is.na(isPrevCongruent)))) # 1 trial level exclusion criteria
+#If we want to keep the first trial of each block in the sample for calculating participant level mean RT, we need to comment out this chunk
 ```
 
 # Calucalte the mean response time and SD for exclusion
@@ -263,9 +264,12 @@ raw <-
                                        ungroup() %>% 
                                        mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
                                               rtGrandSd = sd(rtParticipantMean, na.rm = T))),
+                                      #add %>% filter(!is.na(isPrevCongruent)) to the end here if previous chunk was commented out
+                                      #to make sure rtParticipantOutliers and rtTrialOutliers are the same size
          rtTrialOutliers = map(response,
                                . %>% 
                                  ungroup() %>% 
+                                 #filter(!is.na(isPrevCongruent)) %>% # this is only necessary if the previous chunk was commented out
                                  group_by(participant_id, isCongruent, isPrevCongruent) %>% 
                                  summarise(rtConditionalMean = mean(rt, na.rm = T),
                                            rtConditionalSd = sd(rt, na.rm = T))),
@@ -282,11 +286,12 @@ raw <-
   raw %>%
   mutate(response = map(response,
                         . %>% 
-                          group_by(participant_id) %>% 
+                          group_by(participant_id) %>% #what happens when RT is NA_real_ because it's a timeout?
                           mutate(dropTrialRt = case_when(rtConditionalMean + 2.5 * rtConditionalSd < rt ~ 1L,
                                                          rtConditionalMean - 2.5 * rtConditionalSd > rt ~ 1L,
                                                          TRUE ~ 0L),
-                                 isPrevDropTrialRt = case_when(trial <= 2 ~ NA_integer_, #at this point there should be no trial == 1 trials because they were removed is.na(PrevCongruent) was filtered, trial == 2 trials will have NO previous trial as the immediately preceding trial will be the last trial of the previous block
+                                 isPrevDropTrialRt = case_when(trial <= 2 ~ NA_integer_, #at this point there should be no trial == 1 trials because they were removed when is.na(PrevCongruent) was filtered, trial == 2 trials will have NO previous trial as the immediately preceding trial will be the last trial of the previous block; NOTE: if we want to keep the second trial of each block, we can change this line to 
+                                                               #trial == 2 ~ 1L, 
                                                                trial > 2 & lag(dropTrialRt) == 1L ~ 1L,
                                                                trial > 2 & lag(dropTrialRt) == 0L ~ 0L),
                                  dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
