@@ -92,6 +92,9 @@ remove_local_data <- function(local_data_pth) {
 #' 
 #' @return All files that meets the criteria merged into a tibble from the specified subdirectory.
 read_plus <- function(pattern, path, subfolder_name, include = NULL, sep) {
+  if(!str_ends(path,"/")) { # this allows to run this function without using last /
+    path <- paste0(path,"/")
+  }
   files <- tibble(list = list.files(path = paste0(path, subfolder_name), pattern = pattern, full.names = T, recursive = T))
   
   if(!is.null(include)){
