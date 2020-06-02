@@ -3,6 +3,8 @@ title: "Weissman-replication-analysis"
 author: "Marton Kovacs"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
 output: html_document
+params:
+  dataset: "main"
 ---
 
 # Load packages
@@ -37,14 +39,23 @@ weissman_project <- osf_retrieve_node(data_guid)
 ## Download data locally
 
 ```{r osf download data, message = FALSE, echo = T, results = "hide"}
-local_data_pth <- file.path("data","Processed")
-
+if(params$dataset == "main") {
+  data_subdir <- "Processed_main"
+  local_data_pth <- file.path("data",data_subdir)
+  
+} else if(params$dataset == "no_fst") {
+   data_subdir <- "Processed_no_fst"
+   local_data_pth <- file.path("data",data_subdir)
+} else {
+  stop("wrong parameter")
+}
+ 
 create_local_structure(local_data_pth)
 
 data_files <-
   weissman_project %>%
   osf_ls_files() %>%
-  filter(name == "Processed") %>%
+  filter(name == data_subdir) %>%
   osf_ls_files()
 
 data_files %>%
@@ -67,19 +78,19 @@ processed <-
          rt_data = map(subfolder,
                        ~ read_plus(subfolder_name = .x,
                                    pattern = ".tsv$",
-                                   path = "data/Processed/",
+                                   path = local_data_pth,
                                    sep = "\t",
                                    include = "_Rt_")),
          acc_data = map(subfolder,
                         ~ read_plus(subfolder_name = .x,
                                     pattern = ".tsv$",
-                                    path = "data/Processed/",
+                                    path = local_data_pth,
                                     sep = "\t",
                                     include = "_Acc_")),
          acc_exp_data = map(subfolder,
                         ~ read_plus(subfolder_name = .x,
                                     pattern = ".tsv$",
-                                    path = "data/Processed/",
+                                    path = local_data_pth,
                                     sep = "\t",
                                     include = "Acc_Exploratory_")))
 

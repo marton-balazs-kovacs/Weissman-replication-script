@@ -3,6 +3,8 @@ title: "Weissman-replication-raw-processed"
 author: "Marton Kovacs"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
 output: html_document
+params:
+  dataset: "main"
 ---
 
 # Load packages
@@ -243,17 +245,24 @@ raw <-
 * 1: First trial in each block for each participant
 
 ```{r}
+if(params$dataset == "main") {
 raw <- 
   raw %>% 
   mutate(response = map(response,
                         . %>% 
                           filter(!is.na(isPrevCongruent)))) # 1 trial level exclusion criteria
 #If we want to keep the first trial of each block in the sample for calculating participant level mean RT, we need to comment out this chunk
+} else if(params$dataset == "no_fst") {
+  raw <- raw # this line is not necessary, but in case of more changes, this might be more readable
+} else {
+  stop("wrong parameter")
+}
 ```
 
 # Calucalte the mean response time and SD for exclusion
 
 ```{r calculate mean response time}
+if(params$dataset == "main") {
 raw <-
   raw %>%
   mutate(rtParticipantOutliers = map(response,
@@ -277,6 +286,33 @@ raw <-
                          ~ left_join(.x, .y, by = "participant_id")),
          response = map2(response, rtTrialOutliers,
                          ~ left_join(.x, .y, by = c("participant_id", "isCongruent", "isPrevCongruent"))))
+} else if(params$dataset == "no_fst") {
+  raw <-
+  raw %>%
+  mutate(rtParticipantOutliers = map(response,
+                                     . %>%
+                                       group_by(participant_id) %>% 
+                                       summarise(rtParticipantMean = mean(rt, na.rm = T),
+                                                 rtParticipantSd = sd(rt, na.rm = T)) %>% 
+                                       ungroup() %>% 
+                                       mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
+                                              rtGrandSd = sd(rtParticipantMean, na.rm = T))) %>% 
+                                      filter(!is.na(isPrevCongruent)),
+                                      
+         rtTrialOutliers = map(response,
+                               . %>% 
+                                 ungroup() %>% 
+                                 filter(!is.na(isPrevCongruent)) %>% # this is only necessary if the previous chunk was commented out
+                                 group_by(participant_id, isCongruent, isPrevCongruent) %>% 
+                                 summarise(rtConditionalMean = mean(rt, na.rm = T),
+                                           rtConditionalSd = sd(rt, na.rm = T))),
+         response = map2(response, rtParticipantOutliers, 
+                         ~ left_join(.x, .y, by = "participant_id")),
+         response = map2(response, rtTrialOutliers,
+                         ~ left_join(.x, .y, by = c("participant_id", "isCongruent", "isPrevCongruent"))))
+} else {
+  stop("wrong parameter")
+}
 ```
 
 # Create variable that stores whether a participant or a trial should be dropped based on the rt criteria
@@ -377,7 +413,14 @@ raw <-
 # Save task to individual dataframes
 
 ```{r create output directories}
-out_dir <- "data/Processed/"
+if(params$dataset == "main") {
+  out_dir <- "data/Processed_main/"
+} else if(params$dataset == "no_fst") {
+  out_dir <- "data/Processed_no_fst/"
+} else {
+  stop("wrong parameter")
+}
+
 if(!dir.exists(out_dir)){
   dir.create(out_dir,recursive = T)
 }
@@ -411,7 +454,7 @@ walk2(raw$responseAccAnalysis, raw$task,
 walk2(raw$responseAccExpAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = "data/Processed/",
+                   folder_path = out_dir,
                    extra_name = "Acc_Exploratory"))
 ```
 
