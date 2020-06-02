@@ -5,6 +5,7 @@ date: '`r format(Sys.time(), "%d %B, %Y")`'
 output: html_document
 params:
   dataset: "main"
+  download_from_osf: "yes"
 ---
 
 # Load packages
@@ -50,18 +51,20 @@ if(params$dataset == "main") {
   stop("wrong parameter")
 }
  
-create_local_structure(local_data_pth)
+# it is better to download data only if specified
+if (params$download_from_osf == "yes") {
+   create_local_structure(local_data_pth)
 
-data_files <-
-  weissman_project %>%
-  osf_ls_files() %>%
-  filter(name == data_subdir) %>%
-  osf_ls_files()
+   data_files <-
+      weissman_project %>%
+      osf_ls_files() %>%
+      filter(name == data_subdir) %>%
+      osf_ls_files()
 
-data_files %>%
-  group_by(name) %>% # for each experiment type
-  do(download_files(.,local_data_pth))
-
+   data_files %>%
+      group_by(name) %>% # for each experiment type
+      do(download_files(.,local_data_pth))
+}
 # uncomment following line to remove the data
 # remove_local_data(local_data_pth)
 ```
