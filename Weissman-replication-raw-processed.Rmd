@@ -245,7 +245,7 @@ raw <-
 * 1: First trial in each block for each participant
 
 ```{r}
-if(params$dataset == "main") {
+if(params$dataset == "main"| params$dataset == "no_scnd") {
 raw <- 
   raw %>% 
   mutate(response = map(response,
@@ -262,7 +262,7 @@ raw <-
 # Calucalte the mean response time and SD for exclusion
 
 ```{r calculate mean response time}
-if(params$dataset == "main") {
+if(params$dataset == "main"| params$dataset == "no_scnd") {
 raw <-
   raw %>%
   mutate(rtParticipantOutliers = map(response,
@@ -273,12 +273,9 @@ raw <-
                                        ungroup() %>% 
                                        mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
                                               rtGrandSd = sd(rtParticipantMean, na.rm = T))),
-                                      #add %>% filter(!is.na(isPrevCongruent)) to the end here if previous chunk was commented out
-                                      #to make sure rtParticipantOutliers and rtTrialOutliers are the same size
          rtTrialOutliers = map(response,
                                . %>% 
                                  ungroup() %>% 
-                                 #filter(!is.na(isPrevCongruent)) %>% # this is only necessary if the previous chunk was commented out
                                  group_by(participant_id, isCongruent, isPrevCongruent) %>% 
                                  summarise(rtConditionalMean = mean(rt, na.rm = T),
                                            rtConditionalSd = sd(rt, na.rm = T))),
@@ -286,7 +283,7 @@ raw <-
                          ~ left_join(.x, .y, by = "participant_id")),
          response = map2(response, rtTrialOutliers,
                          ~ left_join(.x, .y, by = c("participant_id", "isCongruent", "isPrevCongruent"))))
-} else if(params$dataset == "no_fst") {
+} else if(params$dataset == "no_fst" | params$dataset == "both") {
   raw <-
   raw %>%
   mutate(rtParticipantOutliers = map(response,
@@ -296,13 +293,12 @@ raw <-
                                                  rtParticipantSd = sd(rt, na.rm = T)) %>% 
                                        ungroup() %>% 
                                        mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
-                                              rtGrandSd = sd(rtParticipantMean, na.rm = T))) %>% 
-                                      filter(!is.na(isPrevCongruent)),
+                                              rtGrandSd = sd(rtParticipantMean, na.rm = T))),
                                       
          rtTrialOutliers = map(response,
                                . %>% 
                                  ungroup() %>% 
-                                 filter(!is.na(isPrevCongruent)) %>% # this is only necessary if the previous chunk was commented out
+                                 filter(!is.na(isPrevCongruent)) %>%
                                  group_by(participant_id, isCongruent, isPrevCongruent) %>% 
                                  summarise(rtConditionalMean = mean(rt, na.rm = T),
                                            rtConditionalSd = sd(rt, na.rm = T))),
@@ -318,6 +314,7 @@ raw <-
 # Create variable that stores whether a participant or a trial should be dropped based on the rt criteria
 
 ```{r}
+if(params$dataset == "main" | params$dataset == "no_fst") {
 raw <-
   raw %>%
   mutate(response = map(response,
@@ -326,13 +323,31 @@ raw <-
                           mutate(dropTrialRt = case_when(rtConditionalMean + 2.5 * rtConditionalSd < rt ~ 1L,
                                                          rtConditionalMean - 2.5 * rtConditionalSd > rt ~ 1L,
                                                          TRUE ~ 0L),
-                                 isPrevDropTrialRt = case_when(trial <= 2 ~ NA_integer_, #at this point there should be no trial == 1 trials because they were removed when is.na(PrevCongruent) was filtered, trial == 2 trials will have NO previous trial as the immediately preceding trial will be the last trial of the previous block; NOTE: if we want to keep the second trial of each block, we can change this line to 
-                                                               #trial == 2 ~ 1L, 
+                                 isPrevDropTrialRt = case_when(trial <= 2 ~ NA_integer_, #at this point there should be no trial == 1 trials because they were removed when is.na(PrevCongruent) was filtered, trial == 2 trials will have NO previous trial as the immediately preceding trial will be the last trial of the previous block
                                                                trial > 2 & lag(dropTrialRt) == 1L ~ 1L,
                                                                trial > 2 & lag(dropTrialRt) == 0L ~ 0L),
                                  dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
                                                                rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
                                                                TRUE ~ 0L))))
+} else if(params$dataset == "no_scnd" | params$dataset == "both") {
+  raw <-
+  raw %>%
+  mutate(response = map(response,
+                        . %>% 
+                          group_by(participant_id) %>% #what happens when RT is NA_real_ because it's a timeout?
+                          mutate(dropTrialRt = case_when(rtConditionalMean + 2.5 * rtConditionalSd < rt ~ 1L,
+                                                         rtConditionalMean - 2.5 * rtConditionalSd > rt ~ 1L,
+                                                         TRUE ~ 0L),
+                                 isPrevDropTrialRt = case_when(trial == 2 ~ 0L, 
+                                                               trial > 2 & lag(dropTrialRt) == 1L ~ 1L,
+                                                               trial > 2 & lag(dropTrialRt) == 0L ~ 0L),
+                                 dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd < rtParticipantMean ~ 1L,
+                                                               rtGrandMean - 2.5 * rtGrandSd > rtParticipantMean ~ 1L,
+                                                               TRUE ~ 0L))))
+  
+} else {
+  stop("wrong parameter")
+}
 ```
 
 # Exclude participants younger than 18 or older than 99
@@ -417,9 +432,13 @@ if(params$dataset == "main") {
   out_dir <- "data/Processed_main/"
 } else if(params$dataset == "no_fst") {
   out_dir <- "data/Processed_no_fst/"
+} else if(params$dataset == "no_scnd"){
+  out_dir <- "data/Processed_no_scnd/"
+} else if(params$dataset == "both") {
+  out_dir <- "data/Processed_both/"
 } else {
   stop("wrong parameter")
-}
+  }
 
 if(!dir.exists(out_dir)){
   dir.create(out_dir,recursive = T)
