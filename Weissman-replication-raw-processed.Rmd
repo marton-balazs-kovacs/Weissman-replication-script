@@ -252,7 +252,7 @@ raw <-
                         . %>% 
                           filter(!is.na(isPrevCongruent)))) # 1 trial level exclusion criteria
 #If we want to keep the first trial of each block in the sample for calculating participant level mean RT, we need to comment out this chunk
-} else if(params$dataset == "no_fst") {
+} else if(params$dataset == "no_fst" | params$dataset == "both") {
   raw <- raw # this line is not necessary, but in case of more changes, this might be more readable
 } else {
   stop("wrong parameter")
