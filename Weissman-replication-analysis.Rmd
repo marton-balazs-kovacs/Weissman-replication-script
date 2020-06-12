@@ -27,7 +27,9 @@ source("utils.R")
 Read/write token should be created on OSF and it should be named as "osf_token_write"
 
 ```{r osf authentication}
-osf_auth(token = read_lines(list.files(pattern ="osf_token_write_.*.txt")))
+# Let's not require OSF auth if we're not downloading any data
+if (params$download_from_osf == "yes") 
+   osf_auth(token = read_lines(list.files(pattern ="osf_token_write_.*.txt")))
 ```
 
 ## Connect to data OSF folder

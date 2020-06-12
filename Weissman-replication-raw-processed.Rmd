@@ -5,6 +5,7 @@ date: '`r format(Sys.time(), "%d %B, %Y")`'
 output: html_document
 params:
   dataset: "main"
+  download_from_osf: "yes"
 ---
 
 # Load packages
@@ -21,38 +22,35 @@ source("utils.R")
 ```
 
 # Download data from OSF
-## OSF auth (until project is public)
 
 ```{r osf authentication}
-osf_auth(token = read_lines(list.files("./", pattern = "osf_token_write_*")))
-```
-
-## Connect to data OSF folder
-```{r osf connect to OSF folder}
-data_guid <- "9knds"
-
-weissman_project <- osf_retrieve_node(data_guid)
-```
-
-## Download data locally
-
-```{r osf download data}
-local_data_pth <- file.path("data","Raw")
-
-create_local_structure(local_data_pth)
-
-data_files <- 
-  weissman_project %>% 
-  osf_ls_files() %>% 
-  filter(name == "Raw") %>% 
-  osf_ls_files() 
-
-data_files %>% 
-  group_by(name) %>% # for each experiment type
-  do(download_files(.,local_data_pth))
-
-# uncomment following line to remove the data   
-# remove_local_data(local_data_pth)
+# Download data if we're asked to.
+if (params$download_from_osf == "yes") {
+  # OSF auth (until project is public)
+  osf_auth(token = read_lines(list.files("./", pattern = "osf_token_write_*")))
+  
+  # Connect to data OSF folder
+  data_guid <- "9knds"
+  weissman_project <- osf_retrieve_node(data_guid)
+  
+  # Download data locally
+  local_data_pth <- file.path("data","Raw")
+  
+  create_local_structure(local_data_pth)
+  
+  data_files <- 
+    weissman_project %>% 
+    osf_ls_files() %>% 
+    filter(name == "Raw") %>% 
+    osf_ls_files() 
+  
+  data_files %>% 
+    group_by(name) %>% # for each experiment type
+    do(download_files(.,local_data_pth))
+  
+  # uncomment following line to remove the data   
+  # remove_local_data(local_data_pth)
+}
 ```
 
 # Import data
