@@ -6,7 +6,6 @@ datasets <- c("main", "no_fst", "no_scnd", "both")
 combined <- list()
 
 for (d in datasets) {
-  p$dataset <- d
   tmp <- tempfile()
   render("Weissman-replication-raw-processed.Rmd", 
          params = list(dataset = d, download_from_osf = download_from_osf), 
@@ -18,7 +17,7 @@ for (d in datasets) {
   # Save each of the analysis dataframes into a dataframe with the dataset as a column
   for (x in ls()) {
     if (typeof(get(x)) == "list" && 
-        !(x %in% c("combined", "p", "params", "datasets"))) {
+        !(x %in% c("combined", "params", "datasets"))) {
       df <- get(x) 
       df$dataset <- d
       combined[[x]] <- bind_rows(combined[[x]], df)
