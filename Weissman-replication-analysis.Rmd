@@ -44,21 +44,22 @@ weissman_project <- osf_retrieve_node(data_guid)
 ```{r osf download data, message = FALSE, echo = T, results = "hide"}
 if(params$dataset == "main") {
   data_subdir <- "Processed_main"
-  local_data_pth <- file.path("data",data_subdir)
+  
   
 } else if(params$dataset == "no_fst") {
    data_subdir <- "Processed_no_fst"
-   local_data_pth <- file.path("data",data_subdir)
+   
 } else if(params$dataset == "no_scnd") {
   data_subdir <- "Processed_no_scnd"
-   local_data_pth <- file.path("data",data_subdir)
+   
 } else if(params$dataset == "both") {
   data_subdir <- "Processed_both"
-   local_data_pth <- file.path("data",data_subdir)
+   
 } else {
   stop("wrong parameter")
 }
  
+local_data_pth <- file.path("data",data_subdir)
 
 # it is better to download data only if specified
 if (params$download_from_osf == "yes") {
