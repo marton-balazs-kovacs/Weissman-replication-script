@@ -4,9 +4,13 @@ library(rmarkdown)
 download_from_osf = "no"
 datasets <- c("main", "no_fst", "no_scnd", "both")
 combined <- list()
+save_passes <- "multiverse/pass"
 
 for (d in datasets) {
-  tmp <- tempfile()
+  if (is.character(save_passes))
+    tmp <- paste0(save_passes, "_", d, ".html")
+  else
+    tmp <- tempfile()
   render("Weissman-replication-raw-processed.Rmd", 
          params = list(dataset = d, download_from_osf = download_from_osf), 
          output_file = tmp)
