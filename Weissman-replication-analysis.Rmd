@@ -704,41 +704,40 @@ Bf(sd = simon_rt$se[1],
 ```
 
 ### Follow up simple effects analysis
-#### Preprocessing data
-
-Saving the data of the task (primeprobe) with significant interaction between current trial congruency and previous trial congruency.
-
-```{r}
-primeprobe <- processed$rt_effect_data[[1]]
-```
-
-#### Checking the number of responses
-
-```{r}
-primeprobe %>% 
-  count()
-```
-
 #### Running the analysis
 
 If the Bayes factor is greater than the preset threshold of B = 3 for the interaction effect in a given task we run a simple effects analyses, contrasting current-congruent congruent (cC) and current-incongruent congruent (iC) trials.
 
 ```{r current congruent follow up comparison for rt}
-current_congruent <- 
-  t.test(primeprobe$ic, primeprobe$cc, paired = TRUE) %>% 
-  broom::tidy()
+processed <-
+  processed %>% 
+  mutate(cong_post_rt = map(rt_data,
+                            . %>% 
+                              filter(isCongruent == 0)),
+         cong_post_rt_test = map2(cong_post_rt, task,
+                                  ~ aov(rtConditionalMean ~ isPrevCongruent + Error(participant_id / isPrevCongruent), data = .x)))
 
-current_congruent %>% knitr::kable()
+# Print results with names
+processed$cong_post_rt_test %>% 
+  set_names(., processed$task) %>% 
+  map(., summary)
 ```
 
 current-congruent incongruent (cI) and current-incongruent incongruent (iI) trials in another.
 
 ```{r current incongruent follow up comparison for rt}
-current_incongruent <- 
-  t.test(primeprobe$ci, primeprobe$ii, paired = TRUE) %>% 
-  broom::tidy()
+processed <-
+  processed %>% 
+  mutate(incong_post_rt = map(rt_data,
+                            . %>% 
+                              filter(isCongruent == 1)),
+         incong_post_rt_test = map2(incong_post_rt, task,
+                                  ~ aov(rtConditionalMean ~ isPrevCongruent + Error(participant_id / isPrevCongruent), data = .x)))
 
-current_incongruent %>% knitr::kable()
+# Print results with names
+processed$incong_post_rt_test %>% 
+  set_names(., processed$task) %>% 
+  map(., summary)
 ```
 
 #### Calculating the Bayes factor for the follow up analysis
