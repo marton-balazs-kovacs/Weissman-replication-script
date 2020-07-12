@@ -757,6 +757,41 @@ processed$incong_post_rt_test %>%
   set_names(., processed$task) %>% 
   map(., summary)
 ```
+#### Brute force method for follow ups - setting up BF calculations ####
+
+```{r}
+primeprobe <- processed$rt_effect_data[[1]]
+flanker <- processed$rt_effect_data[[2]]
+stroop <- processed$rt_effect_data[[3]]
+simon <- processed$rt_effect_data[[4]]
+
+current_cong_pp <- 
+  t.test(primeprobe$ic, primeprobe$cc, paired = TRUE) %>% 
+  broom::tidy()
+current_cong_fl <- 
+  t.test(flanker$ic, flanker$cc, paired = TRUE) %>% 
+  broom::tidy()
+current_cong_str <- 
+  t.test(stroop$ic, stroop$cc, paired = TRUE) %>% 
+  broom::tidy()
+current_cong_sim <- 
+  t.test(simon$ic, simon$cc, paired = TRUE) %>% 
+  broom::tidy()
+
+current_inc_pp <- 
+  t.test(primeprobe$ci, primeprobe$ii, paired = TRUE) %>% 
+  broom::tidy()
+current_inc_fl <- 
+  t.test(flanker$ci, flanker$ii, paired = TRUE) %>% 
+  broom::tidy()
+current_inc_str <- 
+  t.test(stroop$ci, stroop$ii, paired = TRUE) %>% 
+  broom::tidy()
+current_inc_sim <- 
+  t.test(simon$ci, simon$ii, paired = TRUE) %>% 
+  broom::tidy()
+
+```
 
 #### Calculating the Bayes factor for the follow up analysis
 
@@ -765,11 +800,32 @@ The prior H1 model is a half-normal distribution with a mode of 0 and an SD equa
 ##### Current congruent follow up analysis
 
 ```{r}
-Bf(sd = current_congruent$estimate / current_congruent$statistic,
-   obtained = current_congruent$estimate,
-   dfdata = current_congruent$parameter,
+Bf(sd = current_cong_pp$estimate / current_cong_pp$statistic,
+   obtained = current_cong_pp$estimate,
+   dfdata = current_cong_pp$parameter,
    meanoftheory = 0,
    sdtheory = processed$anova_rt_bf_effect[[1]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_fl$estimate / current_cong_fl$statistic,
+   obtained = current_cong_fl$estimate,
+   dfdata = current_cong_fl$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[2]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_str$estimate / current_cong_str$statistic,
+   obtained = current_cong_str$estimate,
+   dfdata = current_cong_str$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[3]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_sim$estimate / current_cong_sim$statistic,
+   obtained = current_cong_sim$estimate,
+   dfdata = current_cong_sim$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[4]]$originalRawEffect[1] / 4,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -778,22 +834,64 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
 
 ```{r}
 # Finding the lower boundary of the robustness region
-Bf(sd = current_congruent$estimate / current_congruent$statistic,
-   obtained = current_congruent$estimate,
-   dfdata = current_congruent$parameter,
+Bf(sd = current_cong_pp$estimate / current_cong_pp$statistic,
+   obtained = current_cong_pp$estimate,
+   dfdata = current_cong_pp$parameter,
    meanoftheory = 0,
-   sdtheory = 0.525,
+   sdtheory = 0.39,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_fl$estimate / current_cong_fl$statistic,
+   obtained = current_cong_fl$estimate,
+   dfdata = current_cong_fl$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[2]]$originalRawEffect[1] / 4, #this was inconclusive so will not be reported in detail
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_str$estimate / current_cong_str$statistic,
+   obtained = current_cong_str$estimate,
+   dfdata = current_cong_str$parameter,
+   meanoftheory = 0,
+   sdtheory = 2.45,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_sim$estimate / current_cong_sim$statistic,
+   obtained = current_cong_sim$estimate,
+   dfdata = current_cong_sim$parameter,
+   meanoftheory = 0,
+   sdtheory = 1.05,
    dftheory = 10^10,
    tail = 1)
 ```
 
 ```{r}
 # Finding the upper boundary of the robustness region
-Bf(sd = current_congruent$estimate / current_congruent$statistic,
-   obtained = current_congruent$estimate,
-   dfdata = current_congruent$parameter,
+Bf(sd = current_cong_pp$estimate / current_cong_pp$statistic,
+   obtained = current_cong_pp$estimate,
+   dfdata = current_cong_pp$parameter,
    meanoftheory = 0,
-   sdtheory = 2713,
+   sdtheory = 4980,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_fl$estimate / current_cong_fl$statistic,
+   obtained = current_cong_fl$estimate,
+   dfdata = current_cong_fl$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[2]]$originalRawEffect[1] / 4, #this was inconclusive
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_str$estimate / current_cong_str$statistic,
+   obtained = current_cong_str$estimate,
+   dfdata = current_cong_str$parameter,
+   meanoftheory = 0,
+   sdtheory = 910,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_cong_sim$estimate / current_cong_sim$statistic,
+   obtained = current_cong_sim$estimate,
+   dfdata = current_cong_sim$parameter,
+   meanoftheory = 0,
+   sdtheory = 12395,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -801,11 +899,32 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
 ##### Current incongruent follow up analysis
 
 ```{r}
-Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
-   obtained = current_incongruent$estimate,
-   dfdata = current_incongruent$parameter,
+Bf(sd = current_inc_pp$estimate / current_inc_pp$statistic,
+   obtained = current_inc_pp$estimate,
+   dfdata = current_inc_pp$parameter,
    meanoftheory = 0,
    sdtheory = processed$anova_rt_bf_effect[[1]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_fl$estimate / current_inc_fl$statistic,
+   obtained = current_inc_fl$estimate,
+   dfdata = current_inc_fl$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[2]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_str$estimate / current_inc_str$statistic,
+   obtained = current_inc_str$estimate,
+   dfdata = current_inc_str$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[3]]$originalRawEffect[1] / 4,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_sim$estimate / current_inc_sim$statistic,
+   obtained = current_inc_sim$estimate,
+   dfdata = current_inc_sim$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[4]]$originalRawEffect[1] / 4,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -814,22 +933,64 @@ Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
 
 ```{r}
 # Finding the lower boundary of the robustness region
-Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
-   obtained = current_incongruent$estimate,
-   dfdata = current_incongruent$parameter,
+Bf(sd = current_inc_pp$estimate / current_inc_pp$statistic,
+   obtained = current_inc_pp$estimate,
+   dfdata = current_inc_pp$parameter,
    meanoftheory = 0,
-   sdtheory = 0.53,
+   sdtheory = 0.55,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_fl$estimate / current_inc_fl$statistic,
+   obtained = current_inc_fl$estimate,
+   dfdata = current_inc_fl$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[2]]$originalRawEffect[1] / 4, #this was inconclusive
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_str$estimate / current_inc_str$statistic,
+   obtained = current_inc_str$estimate,
+   dfdata = current_inc_str$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[3]]$originalRawEffect[1] / 4, #this was inconclusive
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_sim$estimate / current_inc_sim$statistic,
+   obtained = current_inc_sim$estimate,
+   dfdata = current_inc_sim$parameter,
+   meanoftheory = 0,
+   sdtheory = 5.25,
    dftheory = 10^10,
    tail = 1)
 ```
 
 ```{r}
 # Finding the upper boundary of the robustness region
-Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
-   obtained = current_incongruent$estimate,
-   dfdata = current_incongruent$parameter,
+Bf(sd = current_inc_pp$estimate / current_inc_pp$statistic,
+   obtained = current_inc_pp$estimate,
+   dfdata = current_inc_pp$parameter,
    meanoftheory = 0,
-   sdtheory = 2973,
+   sdtheory = 2880,
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_fl$estimate / current_inc_fl$statistic,
+   obtained = current_inc_fl$estimate,
+   dfdata = current_inc_fl$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[2]]$originalRawEffect[1] / 4, #this was inconclusive
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_str$estimate / current_inc_str$statistic,
+   obtained = current_inc_str$estimate,
+   dfdata = current_inc_str$parameter,
+   meanoftheory = 0,
+   sdtheory = processed$anova_rt_bf_effect[[3]]$originalRawEffect[1] / 4, #this was inconclusive
+   dftheory = 10^10,
+   tail = 1)
+Bf(sd = current_inc_sim$estimate / current_inc_sim$statistic,
+   obtained = current_inc_sim$estimate,
+   dfdata = current_inc_sim$parameter,
+   meanoftheory = 0,
+   sdtheory = 5.25, #???
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1625,7 +1786,7 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
    obtained = current_congruent$estimate,
    dfdata = current_congruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.00145,
+   sdtheory = 0.00125,
    dftheory = 10^10,
    tail = 1)
 
@@ -1634,7 +1795,7 @@ Bf(sd = current_congruent$estimate / current_congruent$statistic,
    obtained = current_congruent$estimate,
    dfdata = current_congruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.026,
+   sdtheory = 0.042,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -1665,7 +1826,7 @@ Bf(sd = current_incongruent$estimate / current_incongruent$statistic,
    obtained = -(current_incongruent$estimate),
    dfdata = current_incongruent$parameter,
    meanoftheory = 0,
-   sdtheory = 0.062,
+   sdtheory = 0.07,
    dftheory = 10^10,
    tail = 1)
 ```
