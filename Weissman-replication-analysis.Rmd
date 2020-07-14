@@ -2005,13 +2005,13 @@ stroop_acc_exp <- processed$anova_acc_exp_bf_effect[[3]]
 ## Simon
 simon_acc_exp <- processed$anova_acc_exp_bf_effect[[4]]
 
-# Bf(sd = simon_acc_exp$se[3],
-#    obtained = -(simon_acc_exp$rawEffect[3]),
-#    dfdata = simon_acc_exp$nParticipant[1] - 1,
-#    meanoftheory = 0,
-#    sdtheory = , 
-#    dftheory = 10^10,
-#    tail = 1)
+ Bf(sd = simon_acc_exp$se[3],
+    obtained = -(simon_acc_exp$rawEffect[3]),
+    dfdata = simon_acc_exp$nParticipant[1] - 1,
+    meanoftheory = 0,
+    sdtheory = 0.0032, 
+    dftheory = 10^10,
+    tail = 1)
 
 # Finding the upper boundary of the robustness region
 ## Primeprobe
@@ -2042,13 +2042,13 @@ simon_acc_exp <- processed$anova_acc_exp_bf_effect[[4]]
 #    tail = 1)
 
 ## Simon
-# Bf(sd = simon_acc_exp$se[3],
-#    obtained = -(simon_acc_exp$rawEffect[3]),
-#    dfdata = simon_acc_exp$nParticipant[1] - 1,
-#    meanoftheory = 0,
-#    sdtheory = ,
-#    dftheory = 10^10,
-#    tail = 1)
+ Bf(sd = simon_acc_exp$se[3],
+    obtained = -(simon_acc_exp$rawEffect[3]),
+    dfdata = simon_acc_exp$nParticipant[1] - 1,
+    meanoftheory = 0,
+    sdtheory = 0.025,
+    dftheory = 10^10,
+    tail = 1)
 ```
 
 ##### For the main congruency effect of the current trial
