@@ -30,13 +30,13 @@ processed <-
          rt_data = map(subfolder,
                        ~ read_plus(subfolder_name = .x,
                                    pattern = ".tsv$",
-                                   path = "data/Processed/",
+                                   path = "data/Processed_main/", #change to Processed_main or whichever else parameter you set in the preprocessing script
                                    sep = "\t",
                                    include = "_Rt_")),
          acc_data = map(subfolder,
                         ~ read_plus(subfolder_name = .x,
                                     pattern = ".tsv$",
-                                    path = "data/Processed/",
+                                    path = "data/Processed_main/", #change to Processed_main or whichever else parameter you set in the preprocessing script
                                     sep = "\t",
                                     include = "_Acc_")))
 ```
