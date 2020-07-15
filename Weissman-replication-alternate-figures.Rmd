@@ -7,7 +7,7 @@ output: html_document
 
 ```{r load packages, warning = FALSE, message = FALSE}
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, osfr, lme4, BayesFactor, DescTools, sjstats, car, broom, papaja, cowplot)
+pacman::p_load(tidyverse)
 ```
 
 # Load helper functions
@@ -79,8 +79,15 @@ processed <-
                                             ci_high = mean_cl_normal(mean_acc)$ymax,
                                             ci_low = mean_cl_normal(mean_acc)$ymin, 
                                             mean_acc = mean_cl_normal(mean_acc)$y)
-                                )
+                                ),
+         task = case_when(
+           task == 'primeprobe' ~ 'Prime-probe task',
+           task == 'flanker' ~ 'Flanker task',
+           task == 'stroop' ~ 'Stroop task',
+           task == 'simon' ~ 'Simon task',
+           T ~ 'invalid task name'
          )
+  )
 ```
 
 # Figures
@@ -105,10 +112,6 @@ theme_set(
 ## RT
 
 ```{r}
-processed$task[[1]] <- "Prime-probe task"
-processed$task[[2]] <- "Flanker task"
-processed$task[[3]] <- "Stroop task"
-processed$task[[4]] <- "Simon task"
 
 processed %>% 
   select(cse_plot_rt_data, task) %>% 
@@ -139,10 +142,6 @@ ggsave("figures/weissman_replication_rt_cse_alt.png",
 ## Accuracy
 
 ```{r}
-processed$task[[1]] <- "Prime-probe task"
-processed$task[[2]] <- "Flanker task"
-processed$task[[3]] <- "Stroop task"
-processed$task[[4]] <- "Simon task"
 
 processed %>% 
   select(cse_plot_acc_data, task) %>% 
