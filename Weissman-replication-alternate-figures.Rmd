@@ -43,6 +43,8 @@ processed <-
 
 # Summarise data
 
+Because ggplot's stat_summary has the bizarre behaviour of dropping out-of-axis values _before_ calculating the summary, we will do the calculations manually here.
+
 ```{r}
 processed <-
   processed %>% 
@@ -54,9 +56,15 @@ processed <-
                                                                  isCongruent ==  1L ~ "Congruent")) %>%
                                   group_by(participant_id, isPrevCongruent, isCongruent) %>% 
                                   summarise(N = n(),
-                                            mean_rt = mean(rt, na.rm = T),
-                                            sd_rt = sd(rt, na.rm = T),
-                                            se_rt = sd_rt / sqrt(N))),
+                                            mean_rt = mean(rt, na.rm = T)) %>%
+                                  group_by(isPrevCongruent, isCongruent) %>% 
+                                  # We can get the below in a clever way using nesting, but this is simpler even 
+                                  # though it calls mean_cl_normal 3 times
+                                  summarise(N = n(),
+                                            ci_high = mean_cl_normal(mean_rt)$ymax,
+                                            ci_low = mean_cl_normal(mean_rt)$ymin, 
+                                            mean_rt = mean_cl_normal(mean_rt)$y)
+                                ),
          cse_plot_acc_data = map(acc_data,
                                 . %>% 
                                   mutate(isPrevCongruent = case_when(isPrevCongruent ==  0L ~ "Incongruent",
@@ -65,12 +73,34 @@ processed <-
                                                                  isCongruent ==  1L ~ "Congruent")) %>%
                                   group_by(participant_id, isPrevCongruent, isCongruent) %>% 
                                   summarise(N = n(),
-                                            mean_acc = mean(isCorrect, na.rm = T),
-                                            sd_acc = sd(isCorrect, na.rm = T),
-                                            se_acc = sd_acc / sqrt(N))))
+                                            mean_acc = mean(isCorrect, na.rm = T)) %>%
+                                  group_by(isPrevCongruent, isCongruent) %>% 
+                                  summarise(N = n(),
+                                            ci_high = mean_cl_normal(mean_acc)$ymax,
+                                            ci_low = mean_cl_normal(mean_acc)$ymin, 
+                                            mean_acc = mean_cl_normal(mean_acc)$y)
+                                )
+         )
 ```
 
 # Figures
+
+```{r}
+# Approximate APA style
+theme_set(
+  theme_light() +
+    theme(
+      panel.grid = element_blank(),
+      rect = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(colour = 'black'),
+      text = element_text(size = 14),
+      axis.line = element_line(size = 1, colour = 'black'),
+      axis.ticks = element_line(size = 1, colour = 'black')
+    )
+)
+
+```
 
 ## RT
 
@@ -81,25 +111,21 @@ processed %>%
   ggplot() +
   aes(x = isPrevCongruent, 
       y = mean_rt, 
+      ymax = ci_high,
+      ymin = ci_low,
       shape = isCongruent, 
       group = isCongruent) +
-  stat_summary(geom = "point", position = position_dodge(width = .5),
-               fun.y = mean, size = 3) + 
-  stat_summary(geom = "errorbar", position = position_dodge(width = .5),
-               fun.data = mean_cl_normal, width = 0) +
-  stat_summary(geom = "line", position = position_dodge(.5),
-               fun.y = mean) + 
-  facet_grid(. ~ task) + 
+  geom_point(position = position_dodge(width = .5), size = 3) +
+  geom_errorbar(position = position_dodge(width = .5), width = 0) +
+  geom_line(position = position_dodge(.5)) + 
+  facet_grid(. ~ str_to_title(task)) + 
   scale_shape_manual(values = c(4, 16)) +
   # scale_y_continuous(limits = c(600, 900)) +
   scale_x_discrete(expand = c(.5, 0)) +
   ggtitle("Mean response times by condition") +
   xlab("Congruency of the previous trial") +
   ylab("Response time +/- 95% CI") +
-  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  papaja::theme_apa() +
-  theme(#legend.position = c(0.85, 0.5),
-        axis.line = element_line(color = "black"))
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) 
 
 ggsave("figures/weissman_replication_rt_cse_alt.png", 
        width = 14.4, height = 8, plot = last_plot())
@@ -114,25 +140,21 @@ processed %>%
   ggplot() +
   aes(x = isPrevCongruent, 
       y = mean_acc, 
+      ymax = ci_high,
+      ymin = ci_low,
       shape = isCongruent, 
       group = isCongruent) +
-  stat_summary(geom = "point", position = position_dodge(width = .5),
-               fun.y = mean, size = 3) + 
-  stat_summary(geom = "errorbar", position = position_dodge(width = .5),
-               fun.data = mean_cl_normal, width = 0) +
-  stat_summary(geom = "line", position = position_dodge(.5),
-               fun.y = mean) + 
-  facet_grid(.~task) + 
+  geom_point(position = position_dodge(width = .5), size = 3) +
+  geom_errorbar(position = position_dodge(width = .5), width = 0) +
+  geom_line(position = position_dodge(.5)) + 
+  facet_grid(. ~ str_to_title(task)) + 
   scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(0.95, 1)) +
+  scale_y_continuous(limits = c(0.90, 1)) +
   scale_x_discrete(expand = c(.5, 0)) +
   ggtitle("Mean accuracy by condition") +
   xlab("Congruency of the previous trial") +
   ylab("Accuracy +/- 95% CI") +
-  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  papaja::theme_apa() +
-  theme(#legend.position = c(0.85, 0.5),
-        axis.line = element_line(color = "black"))
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) 
 
 ggsave("figures/weissman_replication_acc_cse_alt.png", 
        width = 14.4, height = 8, plot = last_plot())
