@@ -32,13 +32,13 @@ processed <-
                                    pattern = ".tsv$",
                                    path = "data/Processed/",
                                    sep = "\t",
-                                   include = "_Acc_")),
+                                   include = "_Rt_")),
          acc_data = map(subfolder,
                         ~ read_plus(subfolder_name = .x,
                                     pattern = ".tsv$",
                                     path = "data/Processed/",
                                     sep = "\t",
-                                    include = "_Rt_")))
+                                    include = "_Acc_")))
 ```
 
 # Summarise data
@@ -113,7 +113,7 @@ processed %>%
   unnest(c(cse_plot_acc_data, task)) %>% 
   ggplot() +
   aes(x = isPrevCongruent, 
-      y = mean_rt, 
+      y = mean_acc, 
       shape = isCongruent, 
       group = isCongruent) +
   stat_summary(geom = "point", position = position_dodge(width = .5),
