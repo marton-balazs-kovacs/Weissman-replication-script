@@ -1326,7 +1326,7 @@ processed <-
                           obtained = .x$estimateFisherZ,
                           dfdata = .x$df,
                           meanoftheory = 0,
-                          sdtheory = .x$originalEstimateFisherZ,
+                          sdtheory = .x$originalEstimateFisherZ, #what is this value? Is this fixed at 0.549?
                           dftheory = 10^10,
                           tail = 1)))
 
