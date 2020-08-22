@@ -1335,6 +1335,24 @@ processed$bf_corr %>%
   set_names(., processed$task)
 ```
 
+The same analysis but fixing the SD at 0.549 first
+```{r}
+processed <-
+  processed %>% 
+  mutate(bf_corr = map(corr_bf_effect,
+                     ~ Bf(sd = .x$se,
+                          obtained = .x$estimateFisherZ,
+                          dfdata = .x$df,
+                          meanoftheory = 0,
+                          sdtheory = 0.549, 
+                          dftheory = 10^10,
+                          tail = 1)))
+
+# Print the results with names
+processed$bf_corr %>% 
+  set_names(., processed$task)
+```
+
 ###### Finding the robustness region for the correlation analysis
 
 ```{r}
