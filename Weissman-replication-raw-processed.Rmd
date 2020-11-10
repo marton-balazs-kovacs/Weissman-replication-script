@@ -451,8 +451,6 @@ for (i in 1:length(subfolder)) {
 ```
 
 ```{r save tasks}
-
-
 # Saving data for the reaction time analysis
 walk2(raw$responseRtAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
@@ -472,7 +470,7 @@ walk2(raw$responseAccExpAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
                    folder_path = out_dir,
-                   extra_name = "Acc_Exploratory"))
+                   extra_name = "_Acc_Exploratory"))
 ```
 
 Final tsv files were uploaded to OSF manually.

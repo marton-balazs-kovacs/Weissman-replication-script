@@ -105,7 +105,7 @@ processed <-
                                     pattern = ".tsv$",
                                     path = local_data_pth,
                                     sep = "\t",
-                                    include = "Acc_Exploratory_")))
+                                    include = "_Acc_Exploratory_")))
 
 # Reading original study effect sizes
 original <- read_tsv("original_study_data.tsv")
@@ -429,8 +429,7 @@ processed <-
 
 # Print results with names
 processed$anova_rt_eta %>% 
-  set_names(., processed$task) %>% 
-  map(., summary)
+  set_names(., processed$task)
 ```
 
 ### Calculating Bayes factors
@@ -1486,13 +1485,11 @@ We are calculating the partial eta square as an effect size estimate for the ANO
 processed <-
   processed %>% 
   mutate(anova_acc_eta = map(anova_acc,
-                            ~ eta_sq(.x, partial = TRUE) %>% 
-                              filter(stratum == "participant_id:isCongruent:isPrevCongruent")))
+                            ~ eta_sq(.x, partial = TRUE)))
 
 # Print results with names
 processed$anova_acc_eta %>% 
-  set_names(., processed$task) %>% 
-  knitr::kable()
+  set_names(., processed$task)
 ```
 
 ### Calculating Bayes factors
@@ -1915,13 +1912,11 @@ We are calculating the partial eta square as an effect size estimate for the ANO
 processed <-
   processed %>% 
   mutate(anova_acc_exp_eta = map(anova_acc_exp,
-                            ~ eta_sq(.x, partial = TRUE) %>% 
-                              filter(stratum == "participant_id:isCongruent:isPrevCongruent")))
+                            ~ eta_sq(.x, partial = TRUE)))
 
 # Print results with names
 processed$anova_acc_exp_eta %>% 
-  set_names(., processed$task) %>% 
-  knitr::kable()
+  set_names(., processed$task)
 ```
 
 ### Calculating Bayes factors

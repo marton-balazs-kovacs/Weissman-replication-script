@@ -20,7 +20,7 @@
 #'   data_files %>% 
 #'   group_by(name) %>% # for each experiment type
 #'     do(download_files(.,local_data_pth))
-download_files <- function(df, local_data_pth, should_overwrite = T) {
+download_files <- function(df, local_data_pth) {
   # we need to set correct class as the current version of osfr does not works with dplyr properly
   class(df) <- c("osf_tbl_file","osf_tbl", class(df)) 
   stopifnot(nrow(df) == 1)
@@ -28,8 +28,8 @@ download_files <- function(df, local_data_pth, should_overwrite = T) {
     osf_ls_files() %>% 
     rowwise() %>% 
     do(osf_retrieve_file(.$id) %>% 
-         osf_download(path = file.path(local_data_pth, df$name,.$name), 
-                      overwrite = should_overwrite))
+         osf_download(path = file.path(local_data_pth, df$name), 
+                      conflicts = "overwrite"))
 }
 
 #' Create local file structure

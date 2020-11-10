@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
@@ -331,6 +330,7 @@ summary {
   border: none;
   display: inline-block;
   border-radius: 4px;
+  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -364,7 +364,7 @@ summary {
 
 <h1 class="title toc-ignore">Weissman-replication-raw-processed</h1>
 <h4 class="author">Marton Kovacs</h4>
-<h4 class="date">09 február, 2020</h4>
+<h4 class="date">10 November, 2020</h4>
 
 </div>
 
@@ -373,6 +373,8 @@ summary {
 <h1>Load packages</h1>
 <pre class="r"><code>if (!require(&quot;pacman&quot;)) install.packages(&quot;pacman&quot;)</code></pre>
 <pre><code>## Loading required package: pacman</code></pre>
+<pre><code>## Warning: package &#39;pacman&#39; was built under R version
+## 4.0.2</code></pre>
 <pre class="r"><code>pacman::p_load(tidyverse, osfr, janitor, lubridate, purrrlyr)</code></pre>
 </div>
 <div id="load-helper-functions" class="section level1">
@@ -381,43 +383,42 @@ summary {
 </div>
 <div id="download-data-from-osf" class="section level1">
 <h1>Download data from OSF</h1>
-<div id="osf-auth-until-project-is-public" class="section level2">
-<h2>OSF auth (until project is public)</h2>
-<pre class="r"><code>osf_auth(token = read_lines(list.files(&quot;./&quot;, pattern = &quot;osf_token_write_*&quot;)))</code></pre>
+<pre class="r"><code># Download data if we&#39;re asked to.
+if (params$download_from_osf == &quot;yes&quot;) {
+  # OSF auth (until project is public)
+  osf_auth(token = read_lines(list.files(&quot;./&quot;, pattern = &quot;osf_token_write_*&quot;)))
+  
+  # Connect to data OSF folder
+  data_guid &lt;- &quot;9knds&quot;
+  weissman_project &lt;- osf_retrieve_node(data_guid)
+  
+  # Download data locally
+  local_data_pth &lt;- file.path(&quot;data&quot;,&quot;Raw&quot;)
+  
+  create_local_structure(local_data_pth)
+  
+  data_files &lt;- 
+    weissman_project %&gt;% 
+    osf_ls_files() %&gt;% 
+    filter(name == &quot;Raw&quot;) %&gt;% 
+    osf_ls_files() 
+  
+  data_files %&gt;% 
+    group_by(name) %&gt;% # for each experiment type
+    do(download_files(.,local_data_pth))
+  
+  # uncomment following line to remove the data   
+  # remove_local_data(local_data_pth)
+}</code></pre>
 <pre><code>## Registered PAT from the provided token</code></pre>
-</div>
-<div id="connect-to-data-osf-folder" class="section level2">
-<h2>Connect to data OSF folder</h2>
-<pre class="r"><code>data_guid &lt;- &quot;9knds&quot;
-
-weissman_project &lt;- osf_retrieve_node(data_guid)</code></pre>
-</div>
-<div id="download-data-locally" class="section level2">
-<h2>Download data locally</h2>
-<pre class="r"><code>local_data_pth &lt;- file.path(&quot;data&quot;,&quot;Raw&quot;)
-
-create_local_structure(local_data_pth)
-
-data_files &lt;- 
-  weissman_project %&gt;% 
-  osf_ls_files() %&gt;% 
-  filter(name == &quot;Raw&quot;) %&gt;% 
-  osf_ls_files() 
-
-data_files %&gt;% 
-  group_by(name) %&gt;% # for each experiment type
-  do(download_files(.,local_data_pth))</code></pre>
 <pre><code>## # A tibble: 4 x 4
 ## # Groups:   name [4]
-##   name            id                  local_path                    meta        
-##   &lt;chr&gt;           &lt;chr&gt;               &lt;chr&gt;                         &lt;list&gt;      
-## 1 flanker_data.t… 5ced801e8d6e050018… data/Raw/flanker/flanker_dat… &lt;named list…
-## 2 primeprobe_dat… 5ced80368d6e05001a… data/Raw/primeprobe/primepro… &lt;named list…
-## 3 simon_data.tsv  5ced804d2a50c40019… data/Raw/simon/simon_data.tsv &lt;named list…
-## 4 stroop_data.tsv 5ced806223fec40018… data/Raw/stroop/stroop_data.… &lt;named list…</code></pre>
-<pre class="r"><code># uncomment following line to remove the data   
-# remove_local_data(local_data_pth)</code></pre>
-</div>
+##   name       id         local_path         meta    
+##   &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;              &lt;list&gt;  
+## 1 flanker_d~ 5ced801e8~ data/Raw/flanker/~ &lt;named ~
+## 2 primeprob~ 5ced80368~ data/Raw/primepro~ &lt;named ~
+## 3 simon_dat~ 5ced804d2~ data/Raw/simon/si~ &lt;named ~
+## 4 stroop_da~ 5ced80622~ data/Raw/stroop/s~ &lt;named ~</code></pre>
 </div>
 <div id="import-data" class="section level1">
 <h1>Import data</h1>
@@ -516,37 +517,45 @@ raw &lt;-
                                   TRUE ~ &quot;incomplete&quot;)) %&gt;% 
       group_by(isPractice, complete) %&gt;% 
       count())</code></pre>
+<pre><code>## Using `n` as weighting variable
+## i Quiet this message with `wt = n` or count rows with `wt = 1`
+## Using `n` as weighting variable
+## i Quiet this message with `wt = n` or count rows with `wt = 1`
+## Using `n` as weighting variable
+## i Quiet this message with `wt = n` or count rows with `wt = 1`
+## Using `n` as weighting variable
+## i Quiet this message with `wt = n` or count rows with `wt = 1`</code></pre>
 <pre><code>## [[1]]
 ## # A tibble: 2 x 3
 ## # Groups:   isPractice, complete [2]
 ##   isPractice complete     n
 ##        &lt;dbl&gt; &lt;chr&gt;    &lt;int&gt;
-## 1          0 complete   128
-## 2          1 complete   128
+## 1          0 complete 49664
+## 2          1 complete  3072
 ## 
 ## [[2]]
 ## # A tibble: 2 x 3
 ## # Groups:   isPractice, complete [2]
 ##   isPractice complete     n
 ##        &lt;dbl&gt; &lt;chr&gt;    &lt;int&gt;
-## 1          0 complete   128
-## 2          1 complete   128
+## 1          0 complete 41472
+## 2          1 complete  3072
 ## 
 ## [[3]]
 ## # A tibble: 2 x 3
 ## # Groups:   isPractice, complete [2]
 ##   isPractice complete     n
 ##        &lt;dbl&gt; &lt;chr&gt;    &lt;int&gt;
-## 1          0 complete   135
-## 2          1 complete   135
+## 1          0 complete 43740
+## 2          1 complete  3240
 ## 
 ## [[4]]
 ## # A tibble: 2 x 3
 ## # Groups:   isPractice, complete [2]
 ##   isPractice complete     n
 ##        &lt;dbl&gt; &lt;chr&gt;    &lt;int&gt;
-## 1          0 complete   127
-## 2          1 complete   127</code></pre>
+## 1          0 complete 41148
+## 2          1 complete  3048</code></pre>
 </div>
 </div>
 <div id="save-practice-trials-to-a-separate-df" class="section level1">
@@ -712,7 +721,9 @@ raw$response[[1]] &lt;-
   select(response) %&gt;% 
   unnest(response) %&gt;%
   mutate(rt = case_when(responseContent != &quot;TIMEOUT&quot; ~ responseTime - probeOnset,
-                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_))
+                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_),
+         trial = (trialId-23) - (block-1)*97 ) %&gt;% 
+  select(task, everything())
 
 ## Flanker
 raw$response[[2]] &lt;- 
@@ -721,7 +732,9 @@ raw$response[[2]] &lt;-
   select(response) %&gt;% 
   unnest(response) %&gt;%
   mutate(rt = case_when(responseContent != &quot;TIMEOUT&quot; ~ responseTime - stimOnset,
-                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_))
+                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_),
+         trial = (trialId-23) - (block-1)*81) %&gt;% 
+  select(task, everything())
 
 # Stroop
 raw$response[[3]] &lt;-
@@ -730,7 +743,9 @@ raw$response[[3]] &lt;-
   select(response) %&gt;% 
   unnest(response) %&gt;%
   mutate(rt = case_when(responseContent != &quot;TIMEOUT&quot; ~ responseTime - stimOnset,
-                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_))
+                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_),
+         trial = (trialId-23) - (block-1)*81) %&gt;% 
+  select(task, everything())
 
 # Simon
 raw$response[[4]] &lt;-
@@ -739,7 +754,9 @@ raw$response[[4]] &lt;-
   select(response) %&gt;% 
   unnest(response) %&gt;%
   mutate(rt = case_when(responseContent != &quot;TIMEOUT&quot; ~ responseTime - stimOnset,
-                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_))</code></pre>
+                        responseContent == &quot;TIMEOUT&quot; ~ NA_real_),
+         trial = (trialId-23) - (block-1)*81) %&gt;% 
+  select(task, everything())</code></pre>
 </div>
 <div id="add-variables-storing-whether-the-previous-trials-were-congruent-and-correct" class="section level1">
 <h1>Add variables storing whether the previous trials were congruent and correct</h1>
@@ -748,12 +765,12 @@ raw$response[[4]] &lt;-
   mutate(response = map(response,
                         . %&gt;% 
                           group_by(participant_id) %&gt;% 
-                          mutate(isPrevCongruent = case_when(trialId == 24 ~ NA_integer_,
-                                                        trialId &gt; 24 &amp; lag(isCongruent) == 1L ~ 1L,
-                                                        trialId &gt; 24 &amp; lag(isCongruent) == 0L ~ 0L),
-                                 isPrevCorrect = case_when(trialId == 24 ~ NA_integer_,
-                                                           trialId &gt; 24 &amp; lag(isCorrect) == 1L ~ 1L,
-                                                           trialId &gt; 24 &amp; lag(isCorrect) == 0L ~ 0L))))</code></pre>
+                          mutate(isPrevCongruent = case_when(trial &lt; 2 ~ NA_integer_,
+                                                        trial &gt;= 2 &amp; lag(isCongruent) == 1L ~ 1L,
+                                                        trial &gt;= 2 &amp; lag(isCongruent) == 0L ~ 0L),
+                                 isPrevCorrect = case_when(trial &lt; 2 ~ NA_integer_,
+                                                           trial &gt;= 2 &amp; lag(isCorrect) == 1L ~ 1L,
+                                                           trial &gt;= 2 &amp; lag(isCorrect) == 0L ~ 0L))))</code></pre>
 </div>
 <div id="exclude-participants-where-all-the-trials-are-time-out-trials" class="section level1">
 <h1>Exclude participants where all the trials are time out trials</h1>
@@ -767,21 +784,33 @@ raw$response[[4]] &lt;-
          response = map2(response, rtAllMissing,
                          ~ left_join(.x, .y, by = &quot;participant_id&quot;) %&gt;% 
                            filter(dropAllMissingRt == 0L))) # Dropping trials</code></pre>
+<pre><code>## `summarise()` ungrouping output (override with `.groups` argument)
+## `summarise()` ungrouping output (override with `.groups` argument)
+## `summarise()` ungrouping output (override with `.groups` argument)
+## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 </div>
 <div id="exclude-each-first-test-trial-of-every-participant-before-calculating-mean-response-times" class="section level1">
 <h1>Exclude each first test trial of every participant before calculating mean response times</h1>
 <ul>
-<li>1: First trial for each participant</li>
+<li>1: First trial in each block for each participant</li>
 </ul>
-<pre class="r"><code>raw &lt;- 
+<pre class="r"><code>if(params$dataset == &quot;main&quot;| params$dataset == &quot;no_scnd&quot;) {
+raw &lt;- 
   raw %&gt;% 
   mutate(response = map(response,
                         . %&gt;% 
-                          filter(!is.na(isPrevCongruent)))) # 1 trial level exclusion criteria</code></pre>
+                          filter(!is.na(isPrevCongruent)))) # 1 trial level exclusion criteria
+#If we want to keep the first trial of each block in the sample for calculating participant level mean RT, we need to comment out this chunk
+} else if(params$dataset == &quot;no_fst&quot; | params$dataset == &quot;both&quot;) {
+  raw &lt;- raw # this line is not necessary, but in case of more changes, this might be more readable
+} else {
+  stop(&quot;wrong parameter&quot;)
+}</code></pre>
 </div>
 <div id="calucalte-the-mean-response-time-and-sd-for-exclusion" class="section level1">
 <h1>Calucalte the mean response time and SD for exclusion</h1>
-<pre class="r"><code>raw &lt;-
+<pre class="r"><code>if(params$dataset == &quot;main&quot;| params$dataset == &quot;no_scnd&quot;) {
+raw &lt;-
   raw %&gt;%
   mutate(rtParticipantOutliers = map(response,
                                      . %&gt;%
@@ -800,23 +829,78 @@ raw$response[[4]] &lt;-
          response = map2(response, rtParticipantOutliers, 
                          ~ left_join(.x, .y, by = &quot;participant_id&quot;)),
          response = map2(response, rtTrialOutliers,
-                         ~ left_join(.x, .y, by = c(&quot;participant_id&quot;, &quot;isCongruent&quot;, &quot;isPrevCongruent&quot;))))</code></pre>
+                         ~ left_join(.x, .y, by = c(&quot;participant_id&quot;, &quot;isCongruent&quot;, &quot;isPrevCongruent&quot;))))
+} else if(params$dataset == &quot;no_fst&quot; | params$dataset == &quot;both&quot;) {
+  raw &lt;-
+  raw %&gt;%
+  mutate(rtParticipantOutliers = map(response,
+                                     . %&gt;%
+                                       group_by(participant_id) %&gt;% 
+                                       summarise(rtParticipantMean = mean(rt, na.rm = T),
+                                                 rtParticipantSd = sd(rt, na.rm = T)) %&gt;% 
+                                       ungroup() %&gt;% 
+                                       mutate(rtGrandMean = mean(rtParticipantMean, na.rm = T),
+                                              rtGrandSd = sd(rtParticipantMean, na.rm = T))),
+                                      
+         rtTrialOutliers = map(response,
+                               . %&gt;% 
+                                 ungroup() %&gt;% 
+                                 filter(!is.na(isPrevCongruent)) %&gt;%
+                                 group_by(participant_id, isCongruent, isPrevCongruent) %&gt;% 
+                                 summarise(rtConditionalMean = mean(rt, na.rm = T),
+                                           rtConditionalSd = sd(rt, na.rm = T))),
+         response = map2(response, rtParticipantOutliers, 
+                         ~ left_join(.x, .y, by = &quot;participant_id&quot;)),
+         response = map2(response, rtTrialOutliers,
+                         ~ left_join(.x, .y, by = c(&quot;participant_id&quot;, &quot;isCongruent&quot;, &quot;isPrevCongruent&quot;))))
+} else {
+  stop(&quot;wrong parameter&quot;)
+}</code></pre>
+<pre><code>## `summarise()` ungrouping output (override with `.groups` argument)
+## `summarise()` ungrouping output (override with `.groups` argument)
+## `summarise()` ungrouping output (override with `.groups` argument)
+## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
+<pre><code>## `summarise()` regrouping output by &#39;participant_id&#39;, &#39;isCongruent&#39; (override with `.groups` argument)
+## `summarise()` regrouping output by &#39;participant_id&#39;, &#39;isCongruent&#39; (override with `.groups` argument)
+## `summarise()` regrouping output by &#39;participant_id&#39;, &#39;isCongruent&#39; (override with `.groups` argument)
+## `summarise()` regrouping output by &#39;participant_id&#39;, &#39;isCongruent&#39; (override with `.groups` argument)</code></pre>
 </div>
 <div id="create-variable-that-stores-whether-a-participant-or-a-trial-should-be-dropped-based-on-the-rt-criteria" class="section level1">
 <h1>Create variable that stores whether a participant or a trial should be dropped based on the rt criteria</h1>
-<pre class="r"><code>raw &lt;-
+<pre class="r"><code>if(params$dataset == &quot;main&quot; | params$dataset == &quot;no_fst&quot;) {
+raw &lt;-
   raw %&gt;%
   mutate(response = map(response,
                         . %&gt;% 
-                          group_by(participant_id) %&gt;% 
+                          group_by(participant_id) %&gt;% #what happens when RT is NA_real_ because it&#39;s a timeout?
                           mutate(dropTrialRt = case_when(rtConditionalMean + 2.5 * rtConditionalSd &lt; rt ~ 1L,
                                                          rtConditionalMean - 2.5 * rtConditionalSd &gt; rt ~ 1L,
                                                          TRUE ~ 0L),
-                                 isPrevDropTrialRt = case_when(trialId &gt; 24 &amp; lag(dropTrialRt) == 1L ~ 1L,
-                                                               trialId &gt; 24 &amp; lag(dropTrialRt) == 0L ~ 0L),
+                                 isPrevDropTrialRt = case_when(trial &lt;= 2 ~ NA_integer_, #at this point there should be no trial == 1 trials because they were removed when is.na(PrevCongruent) was filtered, trial == 2 trials will have NO previous trial as the immediately preceding trial will be the last trial of the previous block
+                                                               trial &gt; 2 &amp; lag(dropTrialRt) == 1L ~ 1L,
+                                                               trial &gt; 2 &amp; lag(dropTrialRt) == 0L ~ 0L),
                                  dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd &lt; rtParticipantMean ~ 1L,
                                                                rtGrandMean - 2.5 * rtGrandSd &gt; rtParticipantMean ~ 1L,
-                                                               TRUE ~ 0L))))</code></pre>
+                                                               TRUE ~ 0L))))
+} else if(params$dataset == &quot;no_scnd&quot; | params$dataset == &quot;both&quot;) {
+  raw &lt;-
+  raw %&gt;%
+  mutate(response = map(response,
+                        . %&gt;% 
+                          group_by(participant_id) %&gt;% #what happens when RT is NA_real_ because it&#39;s a timeout?
+                          mutate(dropTrialRt = case_when(rtConditionalMean + 2.5 * rtConditionalSd &lt; rt ~ 1L,
+                                                         rtConditionalMean - 2.5 * rtConditionalSd &gt; rt ~ 1L,
+                                                         TRUE ~ 0L),
+                                 isPrevDropTrialRt = case_when(trial == 2 ~ 0L, 
+                                                               trial &gt; 2 &amp; lag(dropTrialRt) == 1L ~ 1L,
+                                                               trial &gt; 2 &amp; lag(dropTrialRt) == 0L ~ 0L),
+                                 dropParticipantRt = case_when(rtGrandMean + 2.5 * rtGrandSd &lt; rtParticipantMean ~ 1L,
+                                                               rtGrandMean - 2.5 * rtGrandSd &gt; rtParticipantMean ~ 1L,
+                                                               TRUE ~ 0L))))
+  
+} else {
+  stop(&quot;wrong parameter&quot;)
+}</code></pre>
 </div>
 <div id="exclude-participants-younger-than-18-or-older-than-99" class="section level1">
 <h1>Exclude participants younger than 18 or older than 99</h1>
@@ -889,26 +973,47 @@ raw$response[[4]] &lt;-
 </div>
 <div id="save-task-to-individual-dataframes" class="section level1">
 <h1>Save task to individual dataframes</h1>
+<pre class="r"><code>if(params$dataset == &quot;main&quot;) {
+  out_dir &lt;- &quot;data/Processed_main/&quot;
+} else if(params$dataset == &quot;no_fst&quot;) {
+  out_dir &lt;- &quot;data/Processed_no_fst/&quot;
+} else if(params$dataset == &quot;no_scnd&quot;){
+  out_dir &lt;- &quot;data/Processed_no_scnd/&quot;
+} else if(params$dataset == &quot;both&quot;) {
+  out_dir &lt;- &quot;data/Processed_both/&quot;
+} else {
+  stop(&quot;wrong parameter&quot;)
+  }
+
+if(!dir.exists(out_dir)){
+  dir.create(out_dir,recursive = T)
+}
+for (i in 1:length(subfolder)) {
+  out_dir2 &lt;- paste0(out_dir,subfolder[i])
+  if(!dir.exists(out_dir2)  ){
+    dir.create(out_dir2,recursive = T)
+  }
+}</code></pre>
 <pre class="r"><code># Saving data for the reaction time analysis
 walk2(raw$responseRtAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = &quot;data/Processed/&quot;,
+                   folder_path = out_dir,
                    extra_name = &quot;_Rt&quot;))
 
 # Saving data for the accuracy analysis
 walk2(raw$responseAccAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = &quot;data/Processed/&quot;,
+                   folder_path = out_dir,
                    extra_name = &quot;_Acc&quot;))
 
 # Saving data for the exploratory accuracy analysis
 walk2(raw$responseAccExpAnalysis, raw$task,
       ~ write_tdf2(data_column = .x,
                    id_column = .y,
-                   folder_path = &quot;data/Processed/&quot;,
-                   extra_name = &quot;Acc_Exploratory&quot;))</code></pre>
+                   folder_path = out_dir,
+                   extra_name = &quot;_Acc_Exploratory&quot;))</code></pre>
 <p>Final tsv files were uploaded to OSF manually.</p>
 </div>
 
